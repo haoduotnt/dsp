@@ -64,7 +64,6 @@ func (df *DemandFlight) Launch() {
 			df.Runtime.Logger.Println("uncaught panic, stack trace following", err)
 			s := debug.Stack()
 			df.Runtime.Logger.Println(string(s))
-			df.Error = &Panic{s}
 		}
 	}()
 	ReadBidRequest(df)
@@ -311,7 +310,6 @@ func (wf *WinFlight) Launch() {
 			wf.Runtime.Logger.Println("uncaught panic, stack trace following", err)
 			s := debug.Stack()
 			wf.Runtime.Logger.Println(string(s))
-			wf.Error = &Panic{s}
 		}
 	}()
 	ReadWinNotice(wf)
