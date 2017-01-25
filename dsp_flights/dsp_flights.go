@@ -64,12 +64,15 @@ func (df *DemandFlight) Launch() {
 }
 
 func ReadBidRequest(flight *DemandFlight) {
+	flight.Runtime.Logger.Println(`starting ReadBidRequest!`)
+	flight.StartTime = time.Now()
+
 	if e := json.NewDecoder(flight.HttpRequest.Body).Decode(&flight.Request); e != nil {
 		flight.Error = e
 		flight.Runtime.Logger.Println(`failed to decode body`, e.Error())
 	}
+
 	flight.WinUrl = `http://` + flight.HttpRequest.Host + `/win?price=${AUCTION_PRICE}&key=${AUCTION_BID_ID}&imp=${AUCTION_IMP_ID}`
-	flight.StartTime = time.Now()
 }
 
 // Fill out the elegible bid
@@ -235,13 +238,14 @@ func WriteBidResponse(flight *DemandFlight) {
 	if len(flight.Response.SeatBids) > 0 {
 		if j, e := json.Marshal(flight.Response); e != nil && flight.Error == nil {
 			flight.Error = e
+			flight.Runtime.Logger.Println(`error encoding`, e.Error())
 		} else {
 			res = j
 		}
 	}
 
 	if flight.Error != nil {
-		flight.Runtime.Logger.Println("err encoding %s, returning 500", flight.Error.Error())
+		flight.Runtime.Logger.Printf("err during request %s, returning 500", flight.Error.Error())
 		flight.HttpResponse.WriteHeader(http.StatusInternalServerError)
 	} else if res != nil {
 		flight.HttpResponse.Write(res)
