@@ -248,9 +248,14 @@ func WriteBidResponse(flight *DemandFlight) {
 		flight.Runtime.Logger.Printf("err during request %s, returning 500", flight.Error.Error())
 		flight.HttpResponse.WriteHeader(http.StatusInternalServerError)
 	} else if res != nil {
-		flight.HttpResponse.Write(res)
+		flight.Runtime.Logger.Printf(`looks good and has a response, returning code %d`, http.StatusOK)
+		flight.HttpResponse.Header().Set(`Content-Length`, strconv.Itoa(len(res)))
 		flight.HttpResponse.WriteHeader(http.StatusOK)
+		if n, e := flight.HttpResponse.Write(res); e != nil {
+			flight.Runtime.Logger.Printf(`got an error writing so returning 500! wrote %d bytes: %s`, n, e.Error())
+		}
 	} else {
+		flight.Runtime.Logger.Printf(`looks good but no response, returning code %d`, http.StatusNoContent)
 		flight.HttpResponse.WriteHeader(http.StatusNoContent)
 	}
 	flight.Runtime.Logger.Println(`dsp /bid took`, time.Since(flight.StartTime))
