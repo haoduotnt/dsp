@@ -66,6 +66,7 @@ func (df *DemandFlight) Launch() {
 func ReadBidRequest(flight *DemandFlight) {
 	if e := json.NewDecoder(flight.HttpRequest.Body).Decode(&flight.Request); e != nil {
 		flight.Error = e
+		flight.Runtime.Logger.Println(`failed to decode body`, e.Error())
 	}
 	flight.WinUrl = `http://` + flight.HttpRequest.Host + `/win?price=${AUCTION_PRICE}&key=${AUCTION_BID_ID}&imp=${AUCTION_IMP_ID}`
 	flight.StartTime = time.Now()
