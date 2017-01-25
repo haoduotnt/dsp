@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -58,6 +59,14 @@ func (df *DemandFlight) String() string {
 }
 
 func (df *DemandFlight) Launch() {
+	defer func() {
+		if err := recover(); err != nil {
+			df.Runtime.Logger.Println("uncaught panic, stack trace following", err)
+			s := debug.Stack()
+			df.Runtime.Logger.Println(string(s))
+			df.Error = &Panic{s}
+		}
+	}()
 	ReadBidRequest(df)
 	FindClient(df)
 	WriteBidResponse(df)
@@ -297,6 +306,14 @@ func (wf *WinFlight) String() string {
 }
 
 func (wf *WinFlight) Launch() {
+	defer func() {
+		if err := recover(); err != nil {
+			wf.Runtime.Logger.Println("uncaught panic, stack trace following", err)
+			s := debug.Stack()
+			wf.Runtime.Logger.Println(string(s))
+			wf.Error = &Panic{s}
+		}
+	}()
 	ReadWinNotice(wf)
 	ProcessWin(wf)
 	WriteWinResponse(wf)
