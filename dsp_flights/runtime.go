@@ -123,6 +123,7 @@ func (e *Production) Cycle() error {
 		df.Runtime.DefaultB64 = &B64{Key: []byte(key), IV: []byte(iv)}
 		df.Runtime.RevshareFunc = e.RevshareFunc
 		df.Runtime.TestOnly = e.AllTest
+		df.Runtime.ClickIDFunc = e.ClickIDFunc
 
 		if err := (StatsDB{}).Marshal(e.StatsDB); err != nil {
 			e.Debug.Println("err:", err.Error())
