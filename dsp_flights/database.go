@@ -59,6 +59,7 @@ const sqlNetworks = `SELECT id, pseudonym FROM networks`
 const sqlSubNetworks = `SELECT id, pseudonym FROM subnetworks`
 const sqlSubNetworkLabels = `SELECT id, label FROM subnetworks`
 const sqlBrands = `SELECT id, label FROM brands`
+const sqlBrandSlugs = `SELECT id, slug FROM brands`
 const sqlVerticals = `SELECT id, label FROM verticals`
 const sqlSubnetworkToNetwork = `SELECT id, network_id FROM subnetworks`
 const sqlNetworkToNetworkType = `SELECT network_id, network_type_id FROM network_network_type`
@@ -74,6 +75,8 @@ type Pseudonyms struct {
 	SubnetworkLabelIDS map[int]string
 	Brands             map[string]int
 	BrandIDS           map[int]string
+	BrandSlugs         map[string]int
+	BrandSlugIDS       map[int]string
 	Verticals          map[string]int
 	VerticalIDS        map[int]string
 
@@ -89,6 +92,7 @@ func (c *Pseudonyms) Unmarshal(depth int, env *Production) error {
 	c.Namespace(env, sqlSubNetworks, &c.Subnetworks, &c.SubnetworkIDS)
 	c.Namespace(env, sqlSubNetworkLabels, &c.SubnetworkLabels, &c.SubnetworkLabelIDS)
 	c.Namespace(env, sqlBrands, &c.Brands, &c.BrandIDS)
+	c.Namespace(env, sqlBrandSlugs, &c.BrandSlugs, &c.BrandSlugIDS)
 	c.Namespace(env, sqlVerticals, &c.Verticals, &c.VerticalIDS)
 
 	c.Map(env, sqlNetworkToNetworkType, &c.NetworkToNetworkType)

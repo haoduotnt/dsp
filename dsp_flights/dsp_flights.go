@@ -196,6 +196,11 @@ func FindClient(flight *DemandFlight) {
 		flight.Runtime.Logger.Printf(`brand not found %d`, flight.Request.Site.BrandID)
 		brand = ""
 	}
+	brandSlug, found := flight.Runtime.Storage.Pseudonyms.BrandSlugIDS[flight.Request.Site.BrandID]
+	if !found {
+		flight.Runtime.Logger.Printf(`brandSlug not found %d`, flight.Request.Site.BrandID)
+		brandSlug = ""
+	}
 	vert, found := flight.Runtime.Storage.Pseudonyms.VerticalIDS[flight.Request.Site.VerticalID]
 	if !found {
 		flight.Runtime.Logger.Printf(`vert not found %d`, flight.Request.Site.VerticalID)
@@ -223,6 +228,7 @@ func FindClient(flight *DemandFlight) {
 	url = strings.Replace(url, `{network}`, fmt.Sprintf(`%s`, net), 1)
 	url = strings.Replace(url, `{subnetwork}`, fmt.Sprintf(`%s`, snet), 1)
 	url = strings.Replace(url, `{brand}`, fmt.Sprintf(`%s`, brand), 1)
+	url = strings.Replace(url, `{brandurl}`, fmt.Sprintf(`%s`, brandSlug), 1)
 	url = strings.Replace(url, `{vertical}`, fmt.Sprintf(`%s`, vert), 1)
 
 	bid.URL = url
