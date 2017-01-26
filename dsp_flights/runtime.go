@@ -23,9 +23,7 @@ type Production struct {
 	ConfigDB *sql.DB
 	StatsDB  *sql.DB
 
-	Logic        BiddingLogic
-	RevshareFunc func(*DemandFlight) float64
-	ClickIDFunc  func(*DemandFlight) string
+	Logic BiddingLogic
 
 	AllTest  bool
 	DeferSql bool
@@ -68,6 +66,8 @@ func (e *Production) Cycle() error {
 		e.Logger = log.New(os.Stdout, "", log.Lshortfile|log.Ltime)
 		e.Debug.Println("created new Logger to stdout")
 	}
+
+	e.Logger.Printf("logic %#v", e.Logic)
 
 	if e.DefaultKey == "" {
 		e.DefaultKey = os.Getenv("TDEFAULTKEY")
