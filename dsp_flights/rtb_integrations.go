@@ -1,7 +1,5 @@
 package dsp_flights
 
-import ()
-
 type Impression struct {
 	ID       string `json:"id"`
 	BidFloor int    `json:"bidfloor"`
@@ -55,4 +53,9 @@ type WinNotice struct {
 	WinUrl       string `json:"nurl"`
 	Bid          Bid    `json:"bid"`
 	ImpID        int    `json:"impid"`
+}
+
+type ElegibleFolder struct {
+	FolderID  int
+	BidAmount int
 }

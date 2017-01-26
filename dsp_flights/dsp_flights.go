@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -24,11 +23,10 @@ type DemandFlight struct {
 
 			Recalls func(*DemandFlight)
 		}
-		Logger       *log.Logger
-		Debug        *log.Logger
-		TestOnly     bool
-		RevshareFunc func(*DemandFlight) float64
-		ClickIDFunc  func(*DemandFlight) string
+		Logger   *log.Logger
+		Debug    *log.Logger
+		TestOnly bool
+		Logic    BiddingLogic
 	} `json:"-"`
 
 	HttpRequest  *http.Request       `json:"-"`
@@ -126,6 +124,9 @@ func FindClient(flight *DemandFlight) {
 		return ""
 	}
 
+	folders := []ElegibleFolder{}
+	totalCpc := 0
+
 	Visit := func(folder *Folder) bool {
 		if s := FolderMatches(folder); s != "" {
 			flight.Runtime.Logger.Printf("folder %d doesn't match cause %s..", folder.ID, s)
@@ -139,17 +140,8 @@ func FindClient(flight *DemandFlight) {
 			if folder.ParentID != nil && cpc == 0 {
 				cpc = flight.Runtime.Storage.Folders.ByID(*folder.ParentID).CPC
 			}
-
-			diff := int(math.Pow((float64(cpc)/(float64(flight.FullPrice+cpc))), 2) * 255)
-			flight.Runtime.Logger.Printf("folder %d diffs %d", folder.ID, diff)
-			if diff >= flight.Request.Random255 {
-				flight.FolderID = folder.ID
-				flight.FullPrice = cpc
-				flight.CreativeID = folder.Creative[flight.Request.Random255%len(folder.Creative)]
-				flight.Runtime.Logger.Printf("folder %d selected at %d..", folder.ID, cpc)
-			} else {
-				flight.Runtime.Logger.Printf("folder %d not rand selected..", folder.ID)
-			}
+			totalCpc += cpc
+			folders = append(folders, ElegibleFolder{FolderID: folder.ID, BidAmount: cpc})
 		}
 
 		return true
@@ -168,12 +160,14 @@ func FindClient(flight *DemandFlight) {
 		}
 	}
 
-	if flight.FolderID == 0 {
+	if len(folders) == 0 {
 		flight.Runtime.Logger.Println(`no folder found`)
 		return
 	}
 
-	revShare := flight.Runtime.RevshareFunc(flight)
+	flight.Runtime.Logic.SelectFolderAndCreative(flight, folders, totalCpc)
+
+	revShare := flight.Runtime.Logic.CalculateRevshare(flight)
 	if revShare > 100 {
 		revShare = 100
 	}
@@ -207,7 +201,7 @@ func FindClient(flight *DemandFlight) {
 		vert = ""
 	}
 
-	ct := flight.Runtime.ClickIDFunc(flight)
+	ct := flight.Runtime.Logic.GenerateClickID(flight)
 
 	flight.Runtime.Logger.Println(`saving reference to KVS`)
 

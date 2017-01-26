@@ -13,9 +13,7 @@ type Main struct {
 }
 
 func (m *Main) Launch() {
-	clickid := func(*dsp_flights.DemandFlight) string { return "" }
-	revshare := func(*dsp_flights.DemandFlight) float64 { return 98.0 }
-	sprod := &dsp_flights.Production{AllTest: m.TestOnly, RevshareFunc: revshare, ClickIDFunc: clickid}
+	sprod := &dsp_flights.Production{AllTest: m.TestOnly, Logic: dsp_flights.SimpleLogic{}}
 
 	fmt.Println("running dsp_flights")
 	m.WG.Add(1)

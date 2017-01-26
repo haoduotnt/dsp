@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -22,6 +23,7 @@ type Production struct {
 	ConfigDB *sql.DB
 	StatsDB  *sql.DB
 
+	Logic        BiddingLogic
 	RevshareFunc func(*DemandFlight) float64
 	ClickIDFunc  func(*DemandFlight) string
 
@@ -121,9 +123,8 @@ func (e *Production) Cycle() error {
 		s := strings.Split(e.DefaultKey, ":")
 		key, iv := s[0], s[1]
 		df.Runtime.DefaultB64 = &B64{Key: []byte(key), IV: []byte(iv)}
-		df.Runtime.RevshareFunc = e.RevshareFunc
+		df.Runtime.Logic = e.Logic
 		df.Runtime.TestOnly = e.AllTest
-		df.Runtime.ClickIDFunc = e.ClickIDFunc
 
 		if err := (StatsDB{}).Marshal(e.StatsDB); err != nil {
 			e.Debug.Println("err:", err.Error())
@@ -214,3 +215,29 @@ func (e *Production) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		request.Launch()
 	}
 }
+
+type BiddingLogic interface {
+	SelectFolderAndCreative(flight *DemandFlight, folders []ElegibleFolder, totalCpc int)
+	CalculateRevshare(flight *DemandFlight) float64
+	GenerateClickID(*DemandFlight) string
+}
+
+type SimpleLogic struct {
+}
+
+func (s SimpleLogic) SelectFolderAndCreative(flight *DemandFlight, folders []ElegibleFolder, totalCpc int) {
+	eg := folders[flight.Request.Random255%len(folders)]
+	foldIds := make([]string, len(folders))
+	for n, folder := range folders {
+		foldIds[n] = strconv.Itoa(folder.FolderID)
+	}
+	flight.Runtime.Logger.Println(`folders`, strings.Join(foldIds, ","), `to choose from, picked`, eg.FolderID)
+	flight.FolderID = eg.FolderID
+	flight.FullPrice = eg.BidAmount
+	folder := flight.Runtime.Storage.Folders.ByID(eg.FolderID)
+	flight.CreativeID = folder.Creative[flight.Request.Random255%len(folder.Creative)]
+}
+
+func (s SimpleLogic) CalculateRevshare(flight *DemandFlight) float64 { return 98.0 }
+
+func (s SimpleLogic) GenerateClickID(*DemandFlight) string { return "" }

@@ -463,6 +463,9 @@ func (c *Folders) Add(ch *Folder) int {
 	}
 	ch.ID = m
 	*c = append(*c, ch)
+	for _, child := range ch.Children {
+		c.ByID(child).ParentID = &ch.ID
+	}
 	return ch.ID
 }
 
