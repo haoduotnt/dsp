@@ -5,6 +5,7 @@ import (
 	"github.com/clixxa/dsp/dsp_flights"
 	"os"
 	"sync"
+	"time"
 )
 
 type Main struct {
@@ -16,9 +17,19 @@ func (m *Main) Launch() {
 	sprod := &dsp_flights.Production{AllTest: m.TestOnly, Logic: dsp_flights.SimpleLogic{}}
 
 	fmt.Println("running dsp_flights")
+	sprod.Boot()
+
 	m.WG.Add(1)
 	go func() {
 		sprod.Block()
+		m.WG.Done()
+	}()
+
+	m.WG.Add(1)
+	go func() {
+		for range time.NewTicker(time.Minute).C {
+			sprod.Cycle()
+		}
 		m.WG.Done()
 	}()
 

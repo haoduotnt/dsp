@@ -180,7 +180,6 @@ func (e *Production) Boot() {
 }
 
 func (e *Production) Block() error {
-	e.Boot()
 	return http.ListenAndServe(":8080", e)
 }
 
