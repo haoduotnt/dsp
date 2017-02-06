@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
-	"time"
 )
 
 // Uses environment variables and real database connections to create Runtimes
@@ -170,13 +169,6 @@ func (e *Production) Boot() {
 	if err := e.Cycle(); err != nil {
 		panic("couldn't do initial cycle " + err.Error())
 	}
-	go func() {
-		for range time.NewTicker(time.Minute).C {
-			if err := e.Cycle(); err != nil {
-				e.Logger.Println("error cycling", err.Error())
-			}
-		}
-	}()
 }
 
 func (e *Production) Block() error {
