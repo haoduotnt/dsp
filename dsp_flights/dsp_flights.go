@@ -3,6 +3,7 @@ package dsp_flights
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/clixxa/dsp/bindings"
 	"log"
 	"net/http"
 	"net/url"
@@ -14,14 +15,14 @@ import (
 
 type DemandFlight struct {
 	Runtime struct {
-		DefaultB64 *B64
+		DefaultB64 *bindings.B64
 		Storage    struct {
-			Folders    Folders
-			Creatives  Creatives
-			Pseudonyms Pseudonyms
-			Users      Users
+			Folders    bindings.Folders
+			Creatives  bindings.Creatives
+			Pseudonyms bindings.Pseudonyms
+			Users      bindings.Users
 
-			Recalls func(*DemandFlight)
+			Recalls func(json.Marshaler, *error, *int)
 		}
 		Logger   *log.Logger
 		Debug    *log.Logger
@@ -46,6 +47,12 @@ type DemandFlight struct {
 	WinUrl    string `json:"-"`
 
 	Error error `json:"-"`
+}
+
+type dfProxy DemandFlight
+
+func (df *DemandFlight) MarshalJSON() ([]byte, error) {
+	return json.Marshal((*dfProxy)(df))
 }
 
 func (df *DemandFlight) String() string {
@@ -90,7 +97,7 @@ func FindClient(flight *DemandFlight) {
 
 	bid := Bid{}
 
-	FolderMatches := func(folder *Folder) string {
+	FolderMatches := func(folder *bindings.Folder) string {
 		if !flight.Request.Test {
 			if folder.Country > 0 && flight.Request.Device.Geo.CountryID != folder.Country {
 				return "Country"
@@ -127,7 +134,7 @@ func FindClient(flight *DemandFlight) {
 	folders := []ElegibleFolder{}
 	totalCpc := 0
 
-	Visit := func(folder *Folder) bool {
+	Visit := func(folder *bindings.Folder) bool {
 		if s := FolderMatches(folder); s != "" {
 			flight.Runtime.Logger.Printf("folder %d doesn't match cause %s..", folder.ID, s)
 			return false
@@ -205,7 +212,7 @@ func FindClient(flight *DemandFlight) {
 
 	flight.Runtime.Logger.Println(`saving reference to KVS`)
 
-	flight.Runtime.Storage.Recalls(flight)
+	flight.Runtime.Storage.Recalls(flight, &flight.Error, &flight.RecallID)
 	bid.ID = strconv.Itoa(flight.RecallID)
 
 	bid.WinUrl = flight.WinUrl
@@ -272,8 +279,8 @@ func WriteBidResponse(flight *DemandFlight) {
 type WinFlight struct {
 	Runtime struct {
 		Storage struct {
-			Purchases func(*WinFlight)
-			Recall    func(*WinFlight)
+			Purchases func([18]interface{}, *error)
+			Recall    func(json.Unmarshaler, *error, string)
 		}
 		Logger *log.Logger
 		Debug  *log.Logger
@@ -317,6 +324,16 @@ func (wf *WinFlight) Launch() {
 	WriteWinResponse(wf)
 }
 
+func (wf *WinFlight) Columns() [18]interface{} {
+	return [18]interface{}{wf.SaleID, !wf.Request.Test, wf.RevTXHome, wf.RevTXHome, wf.PaidPrice, wf.PaidPrice, 0, wf.FolderID, wf.CreativeID, wf.Request.Device.Geo.CountryID, wf.Request.Site.VerticalID, wf.Request.Site.BrandID, wf.Request.Site.NetworkID, wf.Request.Site.SubNetworkID, wf.Request.Site.NetworkTypeID, wf.Request.User.GenderID, wf.Request.Device.DeviceTypeID}
+}
+
+type wfProxy WinFlight
+
+func (wf *WinFlight) UnmarshalJSON(d []byte) error {
+	return json.Unmarshal(d, (*wfProxy)(wf))
+}
+
 func ReadWinNotice(flight *WinFlight) {
 	flight.StartTime = time.Now()
 	flight.Runtime.Logger.Println(`starting ProcessWin`, flight.String())
@@ -353,13 +370,13 @@ func ProcessWin(flight *WinFlight) {
 	}
 
 	flight.Runtime.Logger.Printf(`getting bid info for %d`, flight.RecallID)
-	flight.Runtime.Storage.Recall(flight)
+	flight.Runtime.Storage.Recall(flight, &flight.Error, flight.RecallID)
 	flight.RevTXHome = flight.PaidPrice + flight.Margin
 
 	flight.Runtime.Logger.Printf(`adding margin of %d to paid price of %d`, flight.Margin, flight.PaidPrice)
 	flight.Runtime.Logger.Printf(`win: revssp%d revtx%d`, flight.PaidPrice, flight.RevTXHome)
 	flight.Runtime.Logger.Println(`inserting purchase record`)
-	flight.Runtime.Storage.Purchases(flight)
+	flight.Runtime.Storage.Purchases(flight.Columns(), &flight.Error)
 }
 
 func WriteWinResponse(flight *WinFlight) {

@@ -1,4 +1,4 @@
-package dsp_flights
+package bindings
 
 import (
 	"database/sql"
@@ -6,12 +6,22 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	"gopkg.in/redis.v5"
 	"log"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
 )
+
+type BindingDeps struct {
+	StatsDB    *sql.DB
+	ConfigDB   *sql.DB
+	Debug      *log.Logger
+	Logger     *log.Logger
+	DefaultKey string
+	Redis      *redis.Client
+}
 
 func tojson(i interface{}) string {
 	s, _ := json.Marshal(i)
@@ -86,7 +96,7 @@ type Pseudonyms struct {
 	DeviceTypes map[string]int
 }
 
-func (c *Pseudonyms) Unmarshal(depth int, env *Production) error {
+func (c *Pseudonyms) Unmarshal(depth int, env BindingDeps) error {
 	c.Namespace(env, sqlCountries, &c.Countries, &c.CountryIDS)
 	c.Namespace(env, sqlNetworks, &c.Networks, &c.NetworkIDS)
 	c.Namespace(env, sqlSubNetworks, &c.Subnetworks, &c.SubnetworkIDS)
@@ -104,7 +114,7 @@ func (c *Pseudonyms) Unmarshal(depth int, env *Production) error {
 	return nil
 }
 
-func (c *Pseudonyms) Map(env *Production, sql string, dest *map[int]int) error {
+func (c *Pseudonyms) Map(env BindingDeps, sql string, dest *map[int]int) error {
 	rows, err := env.ConfigDB.Query(sql)
 	if err != nil {
 		env.Debug.Println("err", err)
@@ -123,7 +133,7 @@ func (c *Pseudonyms) Map(env *Production, sql string, dest *map[int]int) error {
 	return nil
 }
 
-func (c *Pseudonyms) Namespace(env *Production, sql string, dest *map[string]int, dest2 *map[int]string) error {
+func (c *Pseudonyms) Namespace(env BindingDeps, sql string, dest *map[string]int, dest2 *map[int]string) error {
 	rows, err := env.ConfigDB.Query(sql)
 	if err != nil {
 		env.Debug.Println("err", err)
@@ -167,7 +177,7 @@ func (c *Users) Add(ch *User) int {
 	return ch.ID
 }
 
-func (f *Users) Unmarshal(depth int, env *Production) error {
+func (f *Users) Unmarshal(depth int, env BindingDeps) error {
 	var rows *sql.Rows
 	var err error
 	rows, err = env.ConfigDB.Query(`SELECT id FROM users`)
@@ -202,7 +212,7 @@ type User struct {
 	B64 *B64
 }
 
-func (u *User) Unmarshal(depth int, env *Production) error {
+func (u *User) Unmarshal(depth int, env BindingDeps) error {
 	rows, err := env.ConfigDB.Query(sqlUserIPs, u.ID)
 	if err != nil {
 		env.Debug.Println("err", err)
@@ -250,7 +260,7 @@ func (u *User) Unmarshal(depth int, env *Production) error {
 	return nil
 }
 
-func AllIDs(table string, env *Production) ([]int, error) {
+func AllIDs(table string, env BindingDeps) ([]int, error) {
 	rows, err := env.ConfigDB.Query(`SELECT id FROM ` + table)
 	if err != nil {
 		env.Debug.Println("err", err)
@@ -274,7 +284,7 @@ type Dimensions struct {
 	mode       int
 }
 
-func (d *Dimensions) Unmarshal(depth int, env *Production) error {
+func (d *Dimensions) Unmarshal(depth int, env BindingDeps) error {
 	sql := sqlDimension
 	if d.mode == 1 {
 		sql = sqlDimention
@@ -360,7 +370,7 @@ type Folder struct {
 	mode int
 }
 
-func (f *Folder) Unmarshal(depth int, env *Production) error {
+func (f *Folder) Unmarshal(depth int, env BindingDeps) error {
 	// var child_id, creative_id int
 	var creative_id sql.NullInt64
 	row := env.ConfigDB.QueryRow(sqlFolder, f.ID)
@@ -469,7 +479,7 @@ func (c *Folders) Add(ch *Folder) int {
 	return ch.ID
 }
 
-func (f *Folders) Unmarshal(depth int, env *Production) error {
+func (f *Folders) Unmarshal(depth int, env BindingDeps) error {
 	if ids, err := AllIDs("folders", env); err != nil {
 		return err
 	} else {
@@ -522,7 +532,7 @@ func (c *Creatives) Add(ch *Creative) int {
 	return ch.ID
 }
 
-func (f *Creatives) Unmarshal(depth int, env *Production) error {
+func (f *Creatives) Unmarshal(depth int, env BindingDeps) error {
 	if ids, err := AllIDs("creatives", env); err != nil {
 		return err
 	} else {
@@ -546,7 +556,7 @@ type Creative struct {
 	RedirectUrl string
 }
 
-func (c *Creative) Unmarshal(depth int, env *Production) error {
+func (c *Creative) Unmarshal(depth int, env BindingDeps) error {
 	row := env.ConfigDB.QueryRow(sqlCreative, c.ID)
 	if err := row.Scan(&c.RedirectUrl); err != nil {
 		env.Debug.Println("err", err)
@@ -579,43 +589,44 @@ func (s StatsDB) Marshal(db *sql.DB) error {
 }
 
 type Recalls struct {
-	Env    *Production
+	Env    BindingDeps
 	DoWork bool
 }
 
-func (s Recalls) Save(f *DemandFlight) {
-	js, _ := json.Marshal(f)
+func (s Recalls) Save(f json.Marshaler, errLoc *error, idLoc *int) {
+	js, _ := f.MarshalJSON()
 	if !s.DoWork {
 		return
 	}
 
 	for attempt := 0; attempt < 5; attempt += 1 {
-		f.RecallID = int(rand.Int63())
-		res := s.Env.Redis.SetNX(strconv.Itoa(f.RecallID), js, 10*time.Minute)
+		rec := int(rand.Int63())
+		res := s.Env.Redis.SetNX(strconv.Itoa(rec), js, 10*time.Minute)
 		if err := res.Err(); err != nil {
-			f.Error = err
-			f.Runtime.Logger.Println(`err saving recall`, err.Error())
+			*errLoc = err
+			s.Env.Logger.Println(`err saving recall`, err.Error())
 			return
 		}
 		if res.Val() {
-			f.Runtime.Logger.Println(`saved with id`, f.RecallID)
+			s.Env.Logger.Println(`saved with id`, rec)
+			*idLoc = rec
 			return
 		}
 	}
 
-	f.Error = fmt.Errorf(`couldnt find available id for recall`)
-	f.Runtime.Logger.Println(f.Error.Error())
+	*errLoc = fmt.Errorf(`couldnt find available id for recall`)
+	return
 }
 
-func (s Recalls) Fetch(f *WinFlight) {
+func (s Recalls) Fetch(f json.Unmarshaler, errLoc *error, recall string) {
 	if !s.DoWork {
 		return
 	}
 
-	cmd := s.Env.Redis.Get(f.RecallID)
+	cmd := s.Env.Redis.Get(recall)
 	if err := cmd.Err(); err != nil {
-		f.Error = err
-		f.Runtime.Logger.Println(`err fetching recall`, err.Error())
+		*errLoc = err
+		s.Env.Logger.Println(`err fetching recall`, err.Error())
 		return
 	}
 
@@ -623,35 +634,34 @@ func (s Recalls) Fetch(f *WinFlight) {
 	if raw, err := cmd.Result(); err == nil {
 		target = raw
 	} else {
-		f.Runtime.Logger.Println(`couldn't find in redis, looking in postgres`, err.Error())
-		f.Error = err
+		s.Env.Logger.Println(`couldn't find in redis, looking in postgres`, err.Error())
+		*errLoc = err
 		return
 	}
 
-	if e := json.Unmarshal([]byte(target), f); e != nil {
-		f.Error = e
-		f.Runtime.Logger.Println(`err saving recall`, e.Error())
+	if e := f.UnmarshalJSON([]byte(target)); e != nil {
+		*errLoc = e
+		s.Env.Logger.Println(`err saving recall`, e.Error())
 		return
 	}
 }
 
 type Purchases struct {
-	Env    *Production
+	Env    BindingDeps
 	DoWork bool
 }
 
-func (s Purchases) Save(f *WinFlight) {
-	args := []interface{}{f.SaleID, !f.Request.Test, f.RevTXHome, f.RevTXHome, f.PaidPrice, f.PaidPrice, 0, f.FolderID, f.CreativeID, f.Request.Device.Geo.CountryID, f.Request.Site.VerticalID, f.Request.Site.BrandID, f.Request.Site.NetworkID, f.Request.Site.SubNetworkID, f.Request.Site.NetworkTypeID, f.Request.User.GenderID, f.Request.Device.DeviceTypeID}
-	f.Runtime.Debug.Printf(`would query %s with..`, sqlInsertPurchases)
-	f.Runtime.Logger.Println("saving purchases", args)
+func (s Purchases) Save(f [18]interface{}, errLoc *error) {
+	args := f[:]
+	s.Env.Debug.Printf(`would query %s with..`, sqlInsertPurchases)
+	s.Env.Logger.Println("saving purchases", args)
 	if !s.DoWork {
 		return
 	}
 
 	if _, e := s.Env.StatsDB.Exec(sqlInsertPurchases, args...); e != nil {
-		f.Error = e
-		f.Runtime.Logger.Println(`err saving purchases`, e.Error())
-		return
+		*errLoc = e
+		s.Env.Logger.Println(`err saving purchases`, e.Error())
 	}
 }
 

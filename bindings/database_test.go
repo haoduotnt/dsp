@@ -1,4 +1,4 @@
-package dsp_flights
+package bindings
 
 import (
 	"bufio"
