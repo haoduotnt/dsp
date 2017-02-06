@@ -1,30 +1,12 @@
-package bindings
+package dsp_flights
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/clixxa/dsp/bindings"
 	"gopkg.in/redis.v5"
-	"log"
 	"testing"
 )
-
-func testLogger(t *testing.T) (*log.Logger, func()) {
-	b := bytes.NewBuffer(nil)
-	l := log.New(b, "", log.Lshortfile|log.Ltime)
-	buf := bufio.NewReader(b)
-	f := func() {
-		for {
-			line, e := buf.ReadString('\n')
-			if e != nil {
-				break
-			}
-			t.Logf(`dump %s`, line)
-		}
-	}
-	return l, f
-}
 
 func TestLoadAll(t *testing.T) {
 	db, sqlm, _ := sqlmock.New()
@@ -70,8 +52,8 @@ func TestLoadAll(t *testing.T) {
 
 	sqlm.MatchExpectationsInOrder(false)
 
-	out, dump := testLogger(t)
-	if err := (&Production{ConfigDB: db, StatsDB: db, Logger: out, Debug: out, DefaultKey: ":", Redis: redis.NewClient(&redis.Options{})}).Cycle(); err != nil {
+	out, dump := bindings.BufferedLogger(t)
+	if err := (&Production{BindingDeps: bindings.BindingDeps{ConfigDB: db, StatsDB: db, Logger: out, Debug: out, DefaultKey: ":", Redis: redis.NewClient(&redis.Options{})}}).Cycle(); err != nil {
 		t.Log("failed to cycle, dumping")
 		dump()
 		t.Log("err", err.Error())

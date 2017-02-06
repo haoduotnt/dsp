@@ -1,34 +1,36 @@
 package dsp_flights
 
 import (
+	"encoding/json"
+	"github.com/clixxa/dsp/bindings"
 	"testing"
 )
 
 func TestStageFindClient(t *testing.T) {
-	l, fin := testLogger(t)
+	l, fin := bindings.BufferedLogger(t)
 	flight := &DemandFlight{}
 	flight.Runtime.Logger = l
 	flight.Runtime.Logger.Println("testing StoreFlight, before:", flight)
-	flight.Runtime.DefaultB64 = &B64{Key: []byte("gekk"), IV: []byte("whatwhat")}
+	flight.Runtime.DefaultB64 = &bindings.B64{Key: []byte("gekk"), IV: []byte("whatwhat")}
 
 	store := &flight.Runtime.Storage
-	store.Recalls = func(df *DemandFlight) {
+	store.Recalls = func(df json.Marshaler, a *error, b *int) {
 		t.Log("recall save", df)
 	}
 	flight.Runtime.Logic = SimpleLogic{}
 
-	crid := store.Creatives.Add(&Creative{})
-	own := store.Users.Add(&User{Age: 10})
+	crid := store.Creatives.Add(&bindings.Creative{})
+	own := store.Users.Add(&bindings.User{Age: 10})
 
-	bfid := store.Folders.Add(&Folder{OwnerID: own, Brand: 6, Creative: []int{crid}, CPC: 350})
-	store.Folders.Add(&Folder{Country: 3, Children: []int{bfid}, CPC: 500})
-	store.Folders.Add(&Folder{Country: 4, CPC: 500})
-	store.Folders.Add(&Folder{Country: 3, Brand: 6, CPC: 50})
-	badfolder := store.Folders.Add(&Folder{OwnerID: own, Country: 3, CPC: 50})
-	store.Folders.Add(&Folder{Country: 3, CPC: 700, Children: []int{badfolder}})
-	randpick := store.Folders.Add(&Folder{OwnerID: own, Country: 3, Brand: 6, CPC: 500, Creative: []int{crid}})
+	bfid := store.Folders.Add(&bindings.Folder{OwnerID: own, Brand: 6, Creative: []int{crid}, CPC: 350})
+	store.Folders.Add(&bindings.Folder{Country: 3, Children: []int{bfid}, CPC: 500})
+	store.Folders.Add(&bindings.Folder{Country: 4, CPC: 500})
+	store.Folders.Add(&bindings.Folder{Country: 3, Brand: 6, CPC: 50})
+	badfolder := store.Folders.Add(&bindings.Folder{OwnerID: own, Country: 3, CPC: 50})
+	store.Folders.Add(&bindings.Folder{Country: 3, CPC: 700, Children: []int{badfolder}})
+	randpick := store.Folders.Add(&bindings.Folder{OwnerID: own, Country: 3, Brand: 6, CPC: 500, Creative: []int{crid}})
 	_ = randpick
-	store.Folders.Add(&Folder{Country: 3, Brand: 6, CPC: 250})
+	store.Folders.Add(&bindings.Folder{Country: 3, Brand: 6, CPC: 250})
 
 	flight.Request.Impressions = []Impression{Impression{}}
 	flight.Request.Device.Geo.CountryID = 3
