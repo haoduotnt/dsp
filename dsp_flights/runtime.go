@@ -19,7 +19,6 @@ type Production struct {
 
 	BindingDeps bindings.BindingDeps
 
-	Logger *log.Logger
 	Logic  BiddingLogic
 
 	AllTest  bool
@@ -57,12 +56,12 @@ func (e *Production) Cycle() error {
 		e.BindingDeps.Debug = log.New(os.Stderr, "", log.Lshortfile|log.Ltime)
 	}
 
-	if e.Logger == nil {
-		e.Logger = log.New(os.Stdout, "", log.Lshortfile|log.Ltime)
+	if e.BindingDeps.Logger == nil {
+		e.BindingDeps.Logger = log.New(os.Stdout, "", log.Lshortfile|log.Ltime)
 		e.BindingDeps.Debug.Println("created new Logger to stdout")
 	}
 
-	e.Logger.Printf("logic %#v", e.Logic)
+	e.BindingDeps.Logger.Printf("logic %#v", e.Logic)
 
 	if e.BindingDeps.DefaultKey == "" {
 		e.BindingDeps.DefaultKey = os.Getenv("TDEFAULTKEY")
@@ -111,7 +110,7 @@ func (e *Production) Cycle() error {
 		e.BindingDeps.Debug.Println("using old runtime")
 		df.Runtime = old.Runtime
 	} else {
-		df.Runtime.Logger = e.Logger
+		df.Runtime.Logger = e.BindingDeps.Logger
 		df.Runtime.Logger.Println("brand new runtime")
 		df.Runtime.Debug = e.BindingDeps.Debug
 		df.Runtime.Storage.Recalls = bindings.Recalls{Env: e.BindingDeps, DoWork: !e.DeferSql}.Save
@@ -153,7 +152,7 @@ func (e *Production) Cycle() error {
 		e.BindingDeps.Debug.Println("using old runtime")
 		wf.Runtime = old.Runtime
 	} else {
-		wf.Runtime.Logger = e.Logger
+		wf.Runtime.Logger = e.BindingDeps.Logger
 		wf.Runtime.Logger.Println("brand new runtime")
 		wf.Runtime.Debug = e.BindingDeps.Debug
 
