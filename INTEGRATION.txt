@@ -1,0 +1,106 @@
+REQUEST STAGE (when an ad-unit becomes available, ie, a user is available to be redirected):
+	URL method:
+		do a GET request to this url:
+		http://rdrio.com/{sspid}?kwords={kwords}&ua={ua}&ip={ip}&url={url}&test={test}
+
+		macros: 
+			{kwords} a list of comma-separated keywords
+				eg: one,two,three
+			{ua} the url-encoded user agent
+				eg: Mozilla%2F5.0%20AppleWebKit&
+			{ip} the ip address of the user
+				eg: 127.0.0.1
+			{url} the url-encoded current url of the user
+				eg: http%3A%2F%2Fexample.org%2Fsomebrand
+			{test} if this is the word true this request should not be billed (for testing), anything else and it will be billed
+				eg: true
+	OPENRTB method:
+		POST to this url: 
+		http://rdrio.com/{sspid}
+
+			```
+			{
+			  // a random number between 0 and 255, optional
+			  "rand": 45,
+			  // whether this is a test request or not
+			  "test": false,
+			  // always an array with 1 item
+			  "imp": [
+			    {
+			      // id is a unique id for this impression, optional, helpful for debugging 
+			      "id": "",
+			      // minimum price for this unit (in USD CPM)
+			      "bidfloor": 1000,
+			      // this is always the same, for future ad-format extensions
+			      "redirect": {
+			        "battr": null
+			      }
+			    }
+			  ],
+			  "site": {
+			    "vertical": "vertical",
+			    "brand": "brand",
+			    "network": "network",
+			    "subnetwork": "subnetwork",
+			    "networktype": "networktype"
+			  },
+			  "device": {
+			  	"useragent": "useragent",
+			    "devicetype": "mobile",
+			    "geo": {
+			      // if you detect the country you can put it here
+			      "country": "CA"
+			    }
+			  },
+			  "user": {
+			    "gender": "male",
+			    // the IP of the device
+			    "remoteaddr": "127.0.0.1"
+			  }
+			}
+			```
+
+RESPONSE STAGE:
+	the DSP will determine if the request is suitable or desirable and will response with 
+	EITHER:
+		a 204 http NO CONTENT, which means we do not wish to bid on that ad unit
+	OR:
+		a 200 http OK, which is a "bid" made of the following JSON
+			```
+			{
+			  "seatbid": [
+			    {
+			      "bid": [
+			        {
+			          // a unique ID that should, if this bid wins, be filled out as the AUCTION_BID_ID macro
+			          "id": 5276188924224580233,
+			          // the maximum price this bid is willing to pay (in USD CPM)
+			          "price": 31479,
+			          // the url to redirect the user to, if this bid wins
+			          "rurl": "http://something.com/something",
+			          // the notification url to ping if this bid wins 
+			          "nurl": "http://yourdomain.com/win?price=${AUCTION_PRICE}&key=${AUCTION_BID_ID}&imp=${AUCTION_IMP_ID}"
+			        }
+			      ]
+			    }
+			  ]
+			}
+			```
+
+AUCTION STAGE:
+	at this point the SSP should choose a winner and redirect the user
+
+WINNER NOTIFICATION STAGE:
+	this stage is only needed for auction-based SSP's
+	for direct-deal SSP's, no "nurl" will be returned because the DSP will know that it is guaranteed to be the winner
+
+	minutes of delay are acceptable for this step
+	the SSP must perform a HTTP GET request to the "nurl" (notification url) of that bid
+
+	this is how the DSP is notified that it has won an auction and should perform it's billing/budgeting/logging as appropriate
+	if the SSP does not notify the DSP by performing this request within an hour, the DSP can assume that it did not win that auction 
+
+	the following macro's in the "nurl" must be replaced
+		AUCTION_IMP_ID is a macro for an id the SSP generates for that impression
+		AUCTION_PRICE is a macro the SSP fills out with the winning price the DSP must actually pay (in USD CPM)
+		AUCTION_BID_ID is the "bid id" that the DSP responded with
