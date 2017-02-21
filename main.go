@@ -3,37 +3,42 @@ package main
 import (
 	"fmt"
 	"github.com/clixxa/dsp/dsp_flights"
+	"github.com/clixxa/dsp/services"
+	"github.com/clixxa/dsp/wish_flights"
+	"log"
 	"os"
-	"sync"
-	"time"
 )
 
 type Main struct {
 	TestOnly bool
-	WG       sync.WaitGroup
 }
 
 func (m *Main) Launch() {
-	sprod := &dsp_flights.Production{AllTest: m.TestOnly, Logic: dsp_flights.SimpleLogic{}}
+	deps := &services.ProductionDepsService{}
 
-	fmt.Println("running dsp_flights")
-	sprod.Boot()
+	dspRuntime := &dsp_flights.BidEntrypoint{AllTest: m.TestOnly, Logic: dsp_flights.SimpleLogic{}}
+	winRuntime := &wish_flights.WishEntrypoint{}
 
-	m.WG.Add(1)
-	go func() {
-		sprod.Block()
-		m.WG.Done()
-	}()
+	router := &services.RouterService{}
 
-	m.WG.Add(1)
-	go func() {
-		for range time.NewTicker(time.Minute).C {
-			sprod.Cycle()
-		}
-		m.WG.Done()
-	}()
+	cycler := &services.CycleService{}
+	cycler.BindingDeps.Logger = log.New(os.Stdout, "INIT ", log.Lshortfile|log.Ltime)
 
-	m.WG.Wait()
+	wireUp := &services.CycleService{Proxy: func() error {
+		dspRuntime.BindingDeps = deps.BindingDeps
+		winRuntime.BindingDeps = deps.BindingDeps
+		cycler.BindingDeps = deps.BindingDeps
+		router.BindingDeps = deps.BindingDeps
+		return nil
+	}}
+
+	cycler.Children = append(cycler.Children, deps, wireUp, dspRuntime, winRuntime)
+
+	launch := &services.LaunchService{}
+	launch.Children = append(launch.Children, cycler)
+
+	fmt.Println("starting launcher")
+	launch.Launch()
 }
 
 func NewMain() *Main {

@@ -6,7 +6,6 @@ import (
 	"github.com/clixxa/dsp/bindings"
 	"log"
 	"net/http"
-	"net/url"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -275,4 +274,3 @@ func WriteBidResponse(flight *DemandFlight) {
 	}
 	flight.Runtime.Logger.Println(`dsp /bid took`, time.Since(flight.StartTime))
 }
-

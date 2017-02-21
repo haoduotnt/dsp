@@ -3,13 +3,11 @@ package wish_flights
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/clixxa/dsp/bindings"
 	"log"
 	"net/http"
 	"net/url"
 	"runtime/debug"
 	"strconv"
-	"strings"
 	"time"
 )
 
