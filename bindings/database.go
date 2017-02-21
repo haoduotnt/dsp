@@ -62,7 +62,7 @@ const sqlUserIPs = `SELECT ip FROM ip_histories WHERE user_id = ?`
 const sqlUser = `SELECT setting_id, value FROM user_settings WHERE user_id = ?`
 const sqlDimention = `SELECT dimentions_id, dimentions_type FROM dimentions WHERE folder_id = ?`
 const sqlDimension = `SELECT dimensions_id, dimensions_type FROM dimensions WHERE folder_id = ?`
-const sqlFolder = `SELECT budget, bid, creative_id, user_id FROM folders LEFT JOIN creative_folder ON folder_id = id WHERE id = ?`
+const sqlFolder = `SELECT budget, bid, creative_id, user_id, status FROM folders LEFT JOIN creative_folder ON folder_id = id WHERE id = ?`
 const sqlCreative = `SELECT destination_url FROM creatives cr WHERE cr.id = ?`
 const sqlCountries = `SELECT id, iso_2alpha FROM countries`
 const sqlNetworks = `SELECT id, pseudonym FROM networks`
@@ -367,6 +367,8 @@ type Folder struct {
 	Gender      int
 	DeviceType  int
 
+	Active bool
+
 	mode int
 }
 
@@ -376,7 +378,8 @@ func (f *Folder) Unmarshal(depth int, env BindingDeps) error {
 	row := env.ConfigDB.QueryRow(sqlFolder, f.ID)
 
 	var budget, bid sql.NullInt64
-	if err := row.Scan(&budget, &bid, &creative_id, &f.OwnerID); err != nil {
+	var live sql.NullString
+	if err := row.Scan(&budget, &bid, &creative_id, &f.OwnerID, &live); err != nil {
 		if f.mode == 0 {
 			f.mode = 1
 			env.Debug.Println("users didn't work, trying user")
@@ -384,6 +387,12 @@ func (f *Folder) Unmarshal(depth int, env BindingDeps) error {
 		}
 		env.Debug.Println("err", err)
 		return err
+	}
+
+	if live.Valid {
+		if live.String == "live" {
+			f.Active = true
+		}
 	}
 
 	if budget.Valid {

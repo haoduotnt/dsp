@@ -192,6 +192,9 @@ func FindClient(flight *DemandFlight) {
 	bid := Bid{}
 
 	FolderMatches := func(folder *bindings.Folder) string {
+		if !folder.Active {
+			return "Inactive"
+		}
 		if !flight.Request.Test {
 			if folder.Country > 0 && flight.Request.Device.Geo.CountryID != folder.Country {
 				return "Country"
