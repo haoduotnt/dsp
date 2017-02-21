@@ -651,7 +651,7 @@ type Purchases struct {
 	DoWork bool
 }
 
-func (s Purchases) Save(f [18]interface{}, errLoc *error) {
+func (s Purchases) Save(f [17]interface{}, errLoc *error) {
 	args := f[:]
 	s.Env.Debug.Printf(`would query %s with..`, sqlInsertPurchases)
 	s.Env.Logger.Println("saving purchases", args)
