@@ -589,13 +589,13 @@ func (s StatsDB) Marshal(db *sql.DB) error {
 }
 
 type Recalls struct {
-	Env    BindingDeps
-	DoWork bool
+	Env      BindingDeps
+	SkipWork bool
 }
 
 func (s Recalls) Save(f json.Marshaler, errLoc *error, idLoc *int) {
 	js, _ := f.MarshalJSON()
-	if !s.DoWork {
+	if s.SkipWork {
 		return
 	}
 
@@ -619,7 +619,7 @@ func (s Recalls) Save(f json.Marshaler, errLoc *error, idLoc *int) {
 }
 
 func (s Recalls) Fetch(f json.Unmarshaler, errLoc *error, recall string) {
-	if !s.DoWork {
+	if s.SkipWork {
 		return
 	}
 
@@ -647,15 +647,15 @@ func (s Recalls) Fetch(f json.Unmarshaler, errLoc *error, recall string) {
 }
 
 type Purchases struct {
-	Env    BindingDeps
-	DoWork bool
+	Env      BindingDeps
+	SkipWork bool
 }
 
 func (s Purchases) Save(f [17]interface{}, errLoc *error) {
 	args := f[:]
 	s.Env.Debug.Printf(`would query %s with..`, sqlInsertPurchases)
 	s.Env.Logger.Println("saving purchases", args)
-	if !s.DoWork {
+	if s.SkipWork {
 		return
 	}
 

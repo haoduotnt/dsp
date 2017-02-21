@@ -18,8 +18,7 @@ type WishEntrypoint struct {
 	winFlight   atomic.Value
 	BindingDeps bindings.BindingDeps
 
-	AllTest  bool
-	DeferSql bool
+	AllTest bool
 }
 
 func (e *WishEntrypoint) Cycle() error {
@@ -33,8 +32,8 @@ func (e *WishEntrypoint) Cycle() error {
 		wf.Runtime.Logger.Println("brand new runtime")
 		wf.Runtime.Debug = e.BindingDeps.Debug
 
-		wf.Runtime.Storage.Recall = bindings.Recalls{Env: e.BindingDeps, DoWork: !e.DeferSql}.Fetch
-		wf.Runtime.Storage.Purchases = bindings.Purchases{Env: e.BindingDeps, DoWork: !e.DeferSql}.Save
+		wf.Runtime.Storage.Recall = bindings.Recalls{Env: e.BindingDeps}.Fetch
+		wf.Runtime.Storage.Purchases = bindings.Purchases{Env: e.BindingDeps}.Save
 	}
 
 	e.winFlight.Store(wf)
