@@ -28,17 +28,18 @@ func (m *Main) Launch() {
 	cycler := &services.CycleService{}
 	cycler.BindingDeps.Logger = log.New(os.Stdout, "INIT ", log.Lshortfile|log.Ltime)
 
+	launch := &services.LaunchService{}
+
 	wireUp := &services.CycleService{Proxy: func() error {
 		dspRuntime.BindingDeps = deps.BindingDeps
 		winRuntime.BindingDeps = deps.BindingDeps
 		cycler.BindingDeps = deps.BindingDeps
 		router.BindingDeps = deps.BindingDeps
+		launch.BindingDeps = deps.BindingDeps
 		return nil
 	}}
 
 	cycler.Children = append(cycler.Children, deps, wireUp, dspRuntime, winRuntime)
-
-	launch := &services.LaunchService{}
 	launch.Children = append(launch.Children, cycler, router)
 
 	fmt.Println("starting launcher")
