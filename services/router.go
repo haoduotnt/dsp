@@ -10,14 +10,9 @@ type RouterService struct {
 	Mux         *http.ServeMux
 }
 
-func (r *RouterService) Add(s string, h http.Handler) {
-	r.BindingDeps.Logger.Println("adding", h, "at", s)
-}
-
-func (r *RouterService) Cycle() error {
-	return nil
-}
-
-func (r *RouterService) Launch(chan error) error {
+func (r *RouterService) Launch(errs chan error) error {
+	go func() {
+		errs <- http.ListenAndServe(":8080", r.Mux)
+	}()
 	return nil
 }

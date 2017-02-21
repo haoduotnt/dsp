@@ -6,6 +6,7 @@ import (
 	"github.com/clixxa/dsp/services"
 	"github.com/clixxa/dsp/wish_flights"
 	"log"
+	"net/http"
 	"os"
 )
 
@@ -20,6 +21,9 @@ func (m *Main) Launch() {
 	winRuntime := &wish_flights.WishEntrypoint{}
 
 	router := &services.RouterService{}
+	router.Mux = http.NewServeMux()
+	router.Mux.Handle("/", dspRuntime)
+	router.Mux.Handle("/win", winRuntime)
 
 	cycler := &services.CycleService{}
 	cycler.BindingDeps.Logger = log.New(os.Stdout, "INIT ", log.Lshortfile|log.Ltime)
@@ -35,7 +39,7 @@ func (m *Main) Launch() {
 	cycler.Children = append(cycler.Children, deps, wireUp, dspRuntime, winRuntime)
 
 	launch := &services.LaunchService{}
-	launch.Children = append(launch.Children, cycler)
+	launch.Children = append(launch.Children, cycler, router)
 
 	fmt.Println("starting launcher")
 	launch.Launch()

@@ -3,13 +3,57 @@ package wish_flights
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/clixxa/dsp/bindings"
 	"log"
 	"net/http"
 	"net/url"
 	"runtime/debug"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
+
+// Uses environment variables and real database connections to create Runtimes
+type WishEntrypoint struct {
+	winFlight   atomic.Value
+	BindingDeps bindings.BindingDeps
+
+	AllTest  bool
+	DeferSql bool
+}
+
+func (e *WishEntrypoint) Cycle() error {
+	// create template win flight
+	wf := &WinFlight{}
+	if old, found := e.winFlight.Load().(*WinFlight); found {
+		e.BindingDeps.Debug.Println("using old runtime")
+		wf.Runtime = old.Runtime
+	} else {
+		wf.Runtime.Logger = e.BindingDeps.Logger
+		wf.Runtime.Logger.Println("brand new runtime")
+		wf.Runtime.Debug = e.BindingDeps.Debug
+
+		wf.Runtime.Storage.Recall = bindings.Recalls{Env: e.BindingDeps, DoWork: !e.DeferSql}.Fetch
+		wf.Runtime.Storage.Purchases = bindings.Purchases{Env: e.BindingDeps, DoWork: !e.DeferSql}.Save
+	}
+
+	e.winFlight.Store(wf)
+	return nil
+}
+
+func (e *WishEntrypoint) WinFlight() *WinFlight {
+	sf := e.winFlight.Load().(*WinFlight)
+	flight := &WinFlight{}
+	flight.Runtime = sf.Runtime
+	return flight
+}
+
+func (e *WishEntrypoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	request := e.WinFlight()
+	request.HttpRequest = r
+	request.HttpResponse = w
+	request.Launch()
+}
 
 type WinFlight struct {
 	Runtime struct {
