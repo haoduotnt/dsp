@@ -70,8 +70,8 @@ func TestLoadAll(t *testing.T) {
 	sqlm.ExpectQuery("folders").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(5))
 
 	sqlm.ExpectQuery("folders").WithArgs(5).
-		WillReturnRows(sqlmock.NewRows([]string{"budget", "bid", "creative_id", "owner"}).
-			AddRow(100, 50, 30, 5))
+		WillReturnRows(sqlmock.NewRows([]string{"budget", "bid", "creative_id", "owner", "status"}).
+			AddRow(100, 50, 30, 5, "live"))
 	sqlm.ExpectQuery("parent_folder").WithArgs(5).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("7"))
 	sqlm.ExpectQuery("parent_folder").WithArgs(5).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("8"))
 	sqlm.ExpectQuery("dimentions").WithArgs(5).WillReturnRows(sqlmock.NewRows([]string{"a", "b"}))
