@@ -58,7 +58,7 @@ func (e *WishEntrypoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type WinFlight struct {
 	Runtime struct {
 		Storage struct {
-			Purchases func([18]interface{}, *error)
+			Purchases func([17]interface{}, *error)
 			Recall    func(json.Unmarshaler, *error, string)
 		}
 		Logger *log.Logger
@@ -103,8 +103,8 @@ func (wf *WinFlight) Launch() {
 	WriteWinResponse(wf)
 }
 
-func (wf *WinFlight) Columns() [18]interface{} {
-	return [18]interface{}{wf.SaleID, !wf.Request.Test, wf.RevTXHome, wf.RevTXHome, wf.PaidPrice, wf.PaidPrice, 0, wf.FolderID, wf.CreativeID, wf.Request.Device.Geo.CountryID, wf.Request.Site.VerticalID, wf.Request.Site.BrandID, wf.Request.Site.NetworkID, wf.Request.Site.SubNetworkID, wf.Request.Site.NetworkTypeID, wf.Request.User.GenderID, wf.Request.Device.DeviceTypeID}
+func (wf *WinFlight) Columns() [17]interface{} {
+	return [17]interface{}{wf.SaleID, !wf.Request.Test, wf.RevTXHome, wf.RevTXHome, wf.PaidPrice, wf.PaidPrice, 0, wf.FolderID, wf.CreativeID, wf.Request.Device.Geo.CountryID, wf.Request.Site.VerticalID, wf.Request.Site.BrandID, wf.Request.Site.NetworkID, wf.Request.Site.SubNetworkID, wf.Request.Site.NetworkTypeID, wf.Request.User.GenderID, wf.Request.Device.DeviceTypeID}
 }
 
 type wfProxy WinFlight
