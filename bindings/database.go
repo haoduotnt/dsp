@@ -62,7 +62,7 @@ const sqlUserIPs = `SELECT ip FROM ip_histories WHERE user_id = ?`
 const sqlUser = `SELECT setting_id, value FROM user_settings WHERE user_id = ?`
 const sqlDimention = `SELECT dimentions_id, dimentions_type FROM dimentions WHERE folder_id = ?`
 const sqlDimension = `SELECT dimensions_id, dimensions_type FROM dimensions WHERE folder_id = ?`
-const sqlFolder = `SELECT budget, bid, creative_id, user_id, status FROM folders LEFT JOIN creative_folder ON folder_id = id WHERE id = ?`
+const sqlFolder = `SELECT budget, bid, creative_id, user_id, folders.status FROM folders LEFT JOIN creative_folder ON folder_id = id WHERE id = ?`
 const sqlCreative = `SELECT destination_url FROM creatives cr WHERE cr.id = ?`
 const sqlCountries = `SELECT id, iso_2alpha FROM countries`
 const sqlNetworks = `SELECT id, pseudonym FROM networks`
