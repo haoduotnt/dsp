@@ -229,6 +229,8 @@ func ReadBidRequest(flight *DemandFlight) {
 	} else {
 		flight.Request.GenderID = dim
 	}
+
+	flight.Runtime.Logger.Println("dimensions decoded:", flight.Request)
 }
 
 // Fill out the elegible bid
