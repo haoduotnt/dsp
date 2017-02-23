@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/clixxa/dsp/bindings"
+	"github.com/clixxa/dsp/dsp_flights"
 	"log"
 	"net/http"
 	"net/url"
@@ -72,10 +73,10 @@ type WinFlight struct {
 	RecallID  string `json:"-"`
 	SaleID    int    `json:"-"`
 
-	FolderID   int     `json:"folder"`
-	CreativeID int     `json:"creative"`
-	Margin     int     `json:"margin"`
-	Request    Request `json:"req"`
+	FolderID   int                 `json:"folder"`
+	CreativeID int                 `json:"creative"`
+	Margin     int                 `json:"margin"`
+	Request    dsp_flights.Request `json:"req"`
 
 	StartTime time.Time
 	Error     error `json:"-"`
@@ -103,7 +104,7 @@ func (wf *WinFlight) Launch() {
 }
 
 func (wf *WinFlight) Columns() [17]interface{} {
-	return [17]interface{}{wf.SaleID, !wf.Request.Test, wf.RevTXHome, wf.RevTXHome, wf.PaidPrice, wf.PaidPrice, 0, wf.FolderID, wf.CreativeID, wf.Request.Device.Geo.CountryID, wf.Request.Site.VerticalID, wf.Request.Site.BrandID, wf.Request.Site.NetworkID, wf.Request.Site.SubNetworkID, wf.Request.Site.NetworkTypeID, wf.Request.User.GenderID, wf.Request.Device.DeviceTypeID}
+	return [17]interface{}{wf.SaleID, !wf.Request.Test, wf.RevTXHome, wf.RevTXHome, wf.PaidPrice, wf.PaidPrice, 0, wf.FolderID, wf.CreativeID, wf.Request.CountryID, wf.Request.VerticalID, wf.Request.BrandID, wf.Request.NetworkID, wf.Request.SubNetworkID, wf.Request.NetworkTypeID, wf.Request.GenderID, wf.Request.DeviceTypeID}
 }
 
 type wfProxy WinFlight

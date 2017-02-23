@@ -1,4 +1,4 @@
-package dsp_flights
+package rtb_types
 
 type Impression struct {
 	ID       string `json:"id"`
@@ -13,21 +13,21 @@ type Request struct {
 	Test        bool         `json:"test"`
 	Impressions []Impression `json:"imp"`
 	Site        struct {
-		VerticalID    int `json:"vertical"`
-		BrandID       int `json:"brand"`
-		NetworkID     int `json:"network"`
-		SubNetworkID  int `json:"subnetwork"`
-		NetworkTypeID int `json:"networktype"`
+		Vertical    string `json:"vertical"`
+		Brand       string `json:"brand"`
+		Network     string `json:"network"`
+		SubNetwork  string `json:"subnetwork"`
+		NetworkType string `json:"networktype"`
 	} `json:"site"`
 	Device struct {
-		DeviceTypeID int `json:"devicetype"`
-		Geo          struct {
-			CountryID int `json:"country"`
+		DeviceType string `json:"devicetype"`
+		Geo        struct {
+			Country string `json:"country"`
 		} `json:"geo"`
 	} `json:"device"`
 	User struct {
-		GenderID     int `json:"gender"`
-		RemoteAddrID int `json:"remoteaddr"`
+		Gender     string `json:"gender"`
+		RemoteAddr string `json:"remoteaddr"`
 	} `json:"user"`
 }
 
@@ -53,9 +53,4 @@ type WinNotice struct {
 	WinUrl       string `json:"nurl"`
 	Bid          Bid    `json:"bid"`
 	ImpID        int    `json:"impid"`
-}
-
-type ElegibleFolder struct {
-	FolderID  int
-	BidAmount int
 }

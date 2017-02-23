@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/clixxa/dsp/bindings"
+	"github.com/clixxa/dsp/rtb_types"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -91,7 +92,7 @@ type SimpleLogic struct {
 }
 
 func (s SimpleLogic) SelectFolderAndCreative(flight *DemandFlight, folders []ElegibleFolder, totalCpc int) {
-	eg := folders[flight.Request.Random255%len(folders)]
+	eg := folders[flight.Request.RawRequest.Random255%len(folders)]
 	foldIds := make([]string, len(folders))
 	for n, folder := range folders {
 		foldIds[n] = strconv.Itoa(folder.FolderID)
@@ -100,7 +101,7 @@ func (s SimpleLogic) SelectFolderAndCreative(flight *DemandFlight, folders []Ele
 	flight.FolderID = eg.FolderID
 	flight.FullPrice = eg.BidAmount
 	folder := flight.Runtime.Storage.Folders.ByID(eg.FolderID)
-	flight.CreativeID = folder.Creative[flight.Request.Random255%len(folder.Creative)]
+	flight.CreativeID = folder.Creative[flight.Request.RawRequest.Random255%len(folder.Creative)]
 }
 
 func (s SimpleLogic) CalculateRevshare(flight *DemandFlight) float64 { return 98.0 }
@@ -127,7 +128,7 @@ type DemandFlight struct {
 	HttpRequest  *http.Request       `json:"-"`
 	HttpResponse http.ResponseWriter `json:"-"`
 
-	Response Response `json:"-"`
+	Response rtb_types.Response `json:"-"`
 
 	StartTime time.Time
 
@@ -174,7 +175,7 @@ func ReadBidRequest(flight *DemandFlight) {
 	flight.Runtime.Logger.Println(`starting ReadBidRequest!`)
 	flight.StartTime = time.Now()
 
-	if e := json.NewDecoder(flight.HttpRequest.Body).Decode(&flight.Request); e != nil {
+	if e := json.NewDecoder(flight.HttpRequest.Body).Decode(&flight.Request.RawRequest); e != nil {
 		flight.Error = e
 		flight.Runtime.Logger.Println(`failed to decode body`, e.Error())
 	}
@@ -189,40 +190,40 @@ func FindClient(flight *DemandFlight) {
 		return
 	}
 
-	bid := Bid{}
+	bid := rtb_types.Bid{}
 
 	FolderMatches := func(folder *bindings.Folder) string {
 		if !folder.Active {
 			return "Inactive"
 		}
 		if !flight.Request.Test {
-			if folder.Country > 0 && flight.Request.Device.Geo.CountryID != folder.Country {
+			if folder.Country > 0 && flight.Request.CountryID != folder.Country {
 				return "Country"
 			}
 		}
-		if folder.Brand > 0 && flight.Request.Site.BrandID != folder.Brand {
+		if folder.Brand > 0 && flight.Request.BrandID != folder.Brand {
 			return "Brand"
 		}
-		if folder.Network > 0 && flight.Request.Site.NetworkID != folder.Network {
+		if folder.Network > 0 && flight.Request.NetworkID != folder.Network {
 			return "Network"
 		}
-		if folder.NetworkType > 0 && flight.Request.Site.NetworkTypeID != folder.NetworkType {
+		if folder.NetworkType > 0 && flight.Request.NetworkTypeID != folder.NetworkType {
 			return "NetworkType"
 		}
-		if folder.SubNetwork > 0 && flight.Request.Site.SubNetworkID != folder.SubNetwork {
+		if folder.SubNetwork > 0 && flight.Request.SubNetworkID != folder.SubNetwork {
 			return "SubNetwork"
 		}
-		if folder.Gender > 0 && flight.Request.User.GenderID != folder.Gender {
+		if folder.Gender > 0 && flight.Request.GenderID != folder.Gender {
 			return "Gender"
 		}
-		if folder.DeviceType > 0 && flight.Request.Device.DeviceTypeID != folder.DeviceType {
+		if folder.DeviceType > 0 && flight.Request.DeviceTypeID != folder.DeviceType {
 			return "DeviceType"
 		}
-		if folder.Vertical > 0 && flight.Request.Site.VerticalID != folder.Vertical {
+		if folder.Vertical > 0 && flight.Request.VerticalID != folder.Vertical {
 			return "Vertical"
 		}
 
-		if folder.CPC > 0 && folder.CPC < flight.Request.Impressions[0].BidFloor {
+		if folder.CPC > 0 && folder.CPC < flight.Request.RawRequest.Impressions[0].BidFloor {
 			return "CPC"
 		}
 		return ""
@@ -279,29 +280,29 @@ func FindClient(flight *DemandFlight) {
 	bid.Price = float64(flight.FullPrice) * revShare / 100
 	flight.Margin = flight.FullPrice - int(bid.Price)
 
-	net, found := flight.Runtime.Storage.Pseudonyms.NetworkIDS[flight.Request.Site.NetworkID]
+	net, found := flight.Runtime.Storage.Pseudonyms.NetworkIDS[flight.Request.NetworkID]
 	if !found {
-		flight.Runtime.Logger.Printf(`net not found %d`, flight.Request.Site.NetworkID)
+		flight.Runtime.Logger.Printf(`net not found %d`, flight.Request.NetworkID)
 		net = ""
 	}
-	snet, found := flight.Runtime.Storage.Pseudonyms.SubnetworkIDS[flight.Request.Site.SubNetworkID]
+	snet, found := flight.Runtime.Storage.Pseudonyms.SubnetworkIDS[flight.Request.SubNetworkID]
 	if !found {
-		flight.Runtime.Logger.Printf(`snet not found %d`, flight.Request.Site.SubNetworkID)
+		flight.Runtime.Logger.Printf(`snet not found %d`, flight.Request.SubNetworkID)
 		snet = ""
 	}
-	brand, found := flight.Runtime.Storage.Pseudonyms.BrandIDS[flight.Request.Site.BrandID]
+	brand, found := flight.Runtime.Storage.Pseudonyms.BrandIDS[flight.Request.BrandID]
 	if !found {
-		flight.Runtime.Logger.Printf(`brand not found %d`, flight.Request.Site.BrandID)
+		flight.Runtime.Logger.Printf(`brand not found %d`, flight.Request.BrandID)
 		brand = ""
 	}
-	brandSlug, found := flight.Runtime.Storage.Pseudonyms.BrandSlugIDS[flight.Request.Site.BrandID]
+	brandSlug, found := flight.Runtime.Storage.Pseudonyms.BrandSlugIDS[flight.Request.BrandID]
 	if !found {
-		flight.Runtime.Logger.Printf(`brandSlug not found %d`, flight.Request.Site.BrandID)
+		flight.Runtime.Logger.Printf(`brandSlug not found %d`, flight.Request.BrandID)
 		brandSlug = ""
 	}
-	vert, found := flight.Runtime.Storage.Pseudonyms.VerticalIDS[flight.Request.Site.VerticalID]
+	vert, found := flight.Runtime.Storage.Pseudonyms.VerticalIDS[flight.Request.VerticalID]
 	if !found {
-		flight.Runtime.Logger.Printf(`vert not found %d`, flight.Request.Site.VerticalID)
+		flight.Runtime.Logger.Printf(`vert not found %d`, flight.Request.VerticalID)
 		vert = ""
 	}
 
@@ -336,7 +337,7 @@ func FindClient(flight *DemandFlight) {
 		return
 	}
 
-	flight.Response.SeatBids = append(flight.Response.SeatBids, SeatBid{Bids: []Bid{bid}})
+	flight.Response.SeatBids = append(flight.Response.SeatBids, rtb_types.SeatBid{Bids: []rtb_types.Bid{bid}})
 	flight.Runtime.Logger.Println("finished FindClient", flight.String())
 }
 
@@ -371,4 +372,23 @@ func WriteBidResponse(flight *DemandFlight) {
 		flight.HttpResponse.WriteHeader(http.StatusNoContent)
 	}
 	flight.Runtime.Logger.Println(`dsp /bid took`, time.Since(flight.StartTime))
+}
+
+type Request struct {
+	RawRequest rtb_types.Request
+
+	Test          bool
+	VerticalID    int
+	BrandID       int
+	NetworkID     int
+	SubNetworkID  int
+	NetworkTypeID int
+	DeviceTypeID  int
+	CountryID     int
+	GenderID      int
+}
+
+type ElegibleFolder struct {
+	FolderID  int
+	BidAmount int
 }

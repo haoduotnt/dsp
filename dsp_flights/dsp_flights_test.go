@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/clixxa/dsp/bindings"
+	"github.com/clixxa/dsp/rtb_types"
 	"gopkg.in/redis.v5"
 	"testing"
 )
@@ -35,13 +36,13 @@ func TestStageFindClient(t *testing.T) {
 	_ = randpick
 	store.Folders.Add(&bindings.Folder{Country: 3, Brand: 6, CPC: 250})
 
-	flight.Request.Impressions = []Impression{Impression{}}
-	flight.Request.Device.Geo.CountryID = 3
-	flight.Request.Site.BrandID = 6
+	flight.Request.RawRequest.Impressions = []rtb_types.Impression{{}}
+	flight.Request.CountryID = 3
+	flight.Request.BrandID = 6
 
 	res := map[int]int{}
 	for i := 0; i < 255; i++ {
-		flight.Request.Random255 = i
+		flight.Request.RawRequest.Random255 = i
 		flight.Response.SeatBids = nil
 		flight.FolderID = 0
 		flight.CreativeID = 0
