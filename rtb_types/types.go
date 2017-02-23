@@ -20,6 +20,7 @@ type Request struct {
 		NetworkType string `json:"networktype"`
 	} `json:"site"`
 	Device struct {
+		UserAgent  string `json:"ua"`
 		DeviceType string `json:"devicetype"`
 		Geo        struct {
 			Country string `json:"country"`
