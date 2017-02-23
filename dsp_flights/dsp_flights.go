@@ -246,7 +246,7 @@ func FindClient(flight *DemandFlight) {
 		if !folder.Active {
 			return "Inactive"
 		}
-		if !flight.Request.Test {
+		if !flight.Request.RawRequest.Test {
 			if folder.Country > 0 && flight.Request.CountryID != folder.Country {
 				return "Country"
 			}
@@ -393,7 +393,7 @@ func FindClient(flight *DemandFlight) {
 
 func WriteBidResponse(flight *DemandFlight) {
 	var res []byte
-	if flight.Runtime.TestOnly && len(flight.Response.SeatBids) > 0 && !flight.Request.Test {
+	if flight.Runtime.TestOnly && len(flight.Response.SeatBids) > 0 && !flight.Request.RawRequest.Test {
 		flight.Runtime.Logger.Println(`test traffic only and traffic is non-test, removing bid`, flight.Response.SeatBids)
 		flight.Response.SeatBids = nil
 	}
@@ -427,7 +427,6 @@ func WriteBidResponse(flight *DemandFlight) {
 type Request struct {
 	RawRequest rtb_types.Request
 
-	Test          bool
 	VerticalID    int
 	BrandID       int
 	NetworkID     int
