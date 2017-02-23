@@ -71,29 +71,35 @@ const sqlSubNetworkLabels = `SELECT id, label FROM subnetworks`
 const sqlBrands = `SELECT id, label FROM brands`
 const sqlBrandSlugs = `SELECT id, slug FROM brands`
 const sqlVerticals = `SELECT id, label FROM verticals`
+const sqlNetworkTypes = `SELECT id, label FROM network_types`
 const sqlSubnetworkToNetwork = `SELECT id, network_id FROM subnetworks`
 const sqlNetworkToNetworkType = `SELECT network_id, network_type_id FROM network_network_type`
 
 type Pseudonyms struct {
-	Countries          map[string]int
-	CountryIDS         map[int]string
+	Countries  map[string]int
+	CountryIDS map[int]string
+
 	Networks           map[string]int
 	NetworkIDS         map[int]string
+	NetworkTypes       map[string]int
+	NetworkTypeIDS     map[int]string
 	Subnetworks        map[string]int
 	SubnetworkIDS      map[int]string
 	SubnetworkLabels   map[string]int
 	SubnetworkLabelIDS map[int]string
-	Brands             map[string]int
-	BrandIDS           map[int]string
-	BrandSlugs         map[string]int
-	BrandSlugIDS       map[int]string
-	Verticals          map[string]int
-	VerticalIDS        map[int]string
+
+	Brands       map[string]int
+	BrandIDS     map[int]string
+	BrandSlugs   map[string]int
+	BrandSlugIDS map[int]string
+	Verticals    map[string]int
+	VerticalIDS  map[int]string
 
 	SubnetworkToNetwork  map[int]int
 	NetworkToNetworkType map[int]int
 
 	DeviceTypes map[string]int
+	Genders     map[string]int
 }
 
 func (c *Pseudonyms) Unmarshal(depth int, env BindingDeps) error {
@@ -104,11 +110,13 @@ func (c *Pseudonyms) Unmarshal(depth int, env BindingDeps) error {
 	c.Namespace(env, sqlBrands, &c.Brands, &c.BrandIDS)
 	c.Namespace(env, sqlBrandSlugs, &c.BrandSlugs, &c.BrandSlugIDS)
 	c.Namespace(env, sqlVerticals, &c.Verticals, &c.VerticalIDS)
+	c.Namespace(env, sqlNetworkTypes, &c.NetworkTypes, &c.NetworkTypeIDS)
 
 	c.Map(env, sqlNetworkToNetworkType, &c.NetworkToNetworkType)
 	c.Map(env, sqlSubnetworkToNetwork, &c.SubnetworkToNetwork)
 
 	c.DeviceTypes = map[string]int{"desktop": 1, "mobile": 2, "tablet": 3, "unknown": 4}
+	c.Genders = map[string]int{"male": 1, "female": 2}
 
 	env.Debug.Printf("LOADED %s %T %s", wide(depth), c, tojson(c))
 	return nil

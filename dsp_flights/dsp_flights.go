@@ -181,6 +181,54 @@ func ReadBidRequest(flight *DemandFlight) {
 	}
 
 	flight.WinUrl = `http://` + flight.HttpRequest.Host + `/win?price=${AUCTION_PRICE}&key=${AUCTION_BID_ID}&imp=${AUCTION_IMP_ID}`
+
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Subnetworks[flight.Request.RawRequest.Site.SubNetwork]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.SubNetwork)
+	} else {
+		flight.Request.SubNetworkID = dim
+	}
+
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Countries[flight.Request.RawRequest.Device.Geo.Country]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Device.Geo.Country)
+	} else {
+		flight.Request.CountryID = dim
+	}
+
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Networks[flight.Request.RawRequest.Site.Network]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.Network)
+	} else {
+		flight.Request.NetworkID = dim
+	}
+
+	if dim, found := flight.Runtime.Storage.Pseudonyms.DeviceTypes[flight.Request.RawRequest.Device.DeviceType]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Device.DeviceType)
+	} else {
+		flight.Request.DeviceTypeID = dim
+	}
+
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Brands[flight.Request.RawRequest.Site.Brand]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.Brand)
+	} else {
+		flight.Request.BrandID = dim
+	}
+
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Verticals[flight.Request.RawRequest.Site.Vertical]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.Vertical)
+	} else {
+		flight.Request.VerticalID = dim
+	}
+
+	if dim, found := flight.Runtime.Storage.Pseudonyms.NetworkTypes[flight.Request.RawRequest.Site.NetworkType]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.NetworkType)
+	} else {
+		flight.Request.NetworkTypeID = dim
+	}
+
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Genders[flight.Request.RawRequest.User.Gender]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.User.Gender)
+	} else {
+		flight.Request.GenderID = dim
+	}
 }
 
 // Fill out the elegible bid
