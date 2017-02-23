@@ -120,7 +120,7 @@ func (c *Pseudonyms) Unmarshal(depth int, env BindingDeps) error {
 	c.DeviceTypes = map[string]int{"desktop": 1, "mobile": 2, "tablet": 3, "unknown": 4}
 	c.DeviceTypeIDs = map[int]string{1: "desktop", 2: "mobile", 3: "tablet", 4: "unknown"}
 	c.Genders = map[string]int{"male": 1, "female": 2}
-	c.GenderIDs = map[string]int{1: "male", 2: "female"}
+	c.GenderIDs = map[int]string{1: "male", 2: "female"}
 
 	env.Debug.Printf("LOADED %s %T %s", wide(depth), c, tojson(c))
 	return nil
