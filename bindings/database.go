@@ -98,8 +98,10 @@ type Pseudonyms struct {
 	SubnetworkToNetwork  map[int]int
 	NetworkToNetworkType map[int]int
 
-	DeviceTypes map[string]int
-	Genders     map[string]int
+	DeviceTypes   map[string]int
+	DeviceTypeIDs map[int]string
+	Genders       map[string]int
+	GenderIDs     map[int]string
 }
 
 func (c *Pseudonyms) Unmarshal(depth int, env BindingDeps) error {
@@ -116,7 +118,9 @@ func (c *Pseudonyms) Unmarshal(depth int, env BindingDeps) error {
 	c.Map(env, sqlSubnetworkToNetwork, &c.SubnetworkToNetwork)
 
 	c.DeviceTypes = map[string]int{"desktop": 1, "mobile": 2, "tablet": 3, "unknown": 4}
+	c.DeviceTypeIDs = map[int]string{1: "desktop", 2: "mobile", 3: "tablet", 4: "unknown"}
 	c.Genders = map[string]int{"male": 1, "female": 2}
+	c.GenderIDs = map[string]int{1: "male", 2: "female"}
 
 	env.Debug.Printf("LOADED %s %T %s", wide(depth), c, tojson(c))
 	return nil
