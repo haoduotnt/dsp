@@ -29,6 +29,7 @@ type Request struct {
 	User struct {
 		Gender     string `json:"gender"`
 		RemoteAddr string `json:"remoteaddr"`
+		PubGuid    string `json:"guid"`
 	} `json:"user"`
 }
 
