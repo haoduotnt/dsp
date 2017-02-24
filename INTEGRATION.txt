@@ -14,7 +14,7 @@ REQUEST STAGE (when an ad-unit becomes available, ie, a user is available to be 
 				eg: http%3A%2F%2Fexample.org%2Fsomebrand
 			{test} if this is the word true this request should not be billed (for testing), anything else and it will be billed
 				eg: true
-	OPENRTB method:
+	OpenRTB-compliant method:
 		POST to this url: 
 		http://rdrio.com/{sspid}
 
@@ -65,6 +65,14 @@ RESPONSE STAGE:
 	EITHER:
 		a 204 http NO CONTENT, which means we do not wish to bid on that ad unit
 	OR:
+		a 200 http OK, which is a "bid" made of the following JSON:
+			```
+			{
+				"rpm": 4.29284,
+				"url": "http://someredirecturl.com"
+			}
+			```
+	OR, for OpenRTB-compliant SSP's:
 		a 200 http OK, which is a "bid" made of the following JSON
 			```
 			{
@@ -78,7 +86,7 @@ RESPONSE STAGE:
 			          "price": 31479,
 			          // the url to redirect the user to, if this bid wins
 			          "rurl": "http://something.com/something",
-			          // the notification url to ping if this bid wins 
+			          // the notification url to ping if this bid wins
 			          "nurl": "http://yourdomain.com/win?price=${AUCTION_PRICE}&key=${AUCTION_BID_ID}&imp=${AUCTION_IMP_ID}"
 			        }
 			      ]
@@ -90,10 +98,7 @@ RESPONSE STAGE:
 AUCTION STAGE:
 	at this point the SSP should choose a winner and redirect the user
 
-WINNER NOTIFICATION STAGE:
-	this stage is only needed for auction-based SSP's
-	for direct-deal SSP's, no "nurl" will be returned because the DSP will know that it is guaranteed to be the winner
-
+WINNER NOTIFICATION STAGE, for OpenRTB-compliant SSP's:
 	minutes of delay are acceptable for this step
 	the SSP must perform a HTTP GET request to the "nurl" (notification url) of that bid
 
