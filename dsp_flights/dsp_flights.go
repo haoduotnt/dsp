@@ -206,7 +206,7 @@ func ReadBidRequest(flight *DemandFlight) {
 		flight.Request.DeviceTypeID = dim
 	}
 
-	if dim, found := flight.Runtime.Storage.Pseudonyms.Brands[flight.Request.RawRequest.Site.Brand]; !found {
+	if dim, found := flight.Runtime.Storage.Pseudonyms.BrandSlugs[flight.Request.RawRequest.Site.Brand]; !found {
 		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.Brand)
 	} else {
 		flight.Request.BrandID = dim
