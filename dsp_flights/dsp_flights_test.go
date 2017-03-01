@@ -26,15 +26,15 @@ func TestStageFindClient(t *testing.T) {
 	crid := store.Creatives.Add(&bindings.Creative{})
 	own := store.Users.Add(&bindings.User{Age: 10})
 
-	bfid := store.Folders.Add(&bindings.Folder{OwnerID: own, Brand: []int{6}, Creative: []int{crid}, CPC: 350})
-	store.Folders.Add(&bindings.Folder{Country: []int{3}, Children: []int{bfid}, CPC: 500})
-	store.Folders.Add(&bindings.Folder{Country: []int{4}, CPC: 500})
-	store.Folders.Add(&bindings.Folder{Country: []int{3}, Brand: []int{6}, CPC: 50})
-	badfolder := store.Folders.Add(&bindings.Folder{OwnerID: own, Country: []int{3}, CPC: 50})
-	store.Folders.Add(&bindings.Folder{Country: []int{3}, CPC: 700, Children: []int{badfolder}})
-	randpick := store.Folders.Add(&bindings.Folder{OwnerID: own, Country: []int{3}, Brand: []int{6}, CPC: 500, Creative: []int{crid}})
+	bfid := store.Folders.Add(&bindings.Folder{Active: true, OwnerID: own, Brand: []int{6}, Creative: []int{crid}, CPC: 350})
+	store.Folders.Add(&bindings.Folder{Active: true, Country: []int{3}, Children: []int{bfid}, CPC: 500})
+	store.Folders.Add(&bindings.Folder{Active: true, Country: []int{4}, CPC: 500})
+	store.Folders.Add(&bindings.Folder{Active: true, Country: []int{3}, Brand: []int{6}, CPC: 50})
+	badfolder := store.Folders.Add(&bindings.Folder{Active: true, OwnerID: own, Country: []int{3}, CPC: 50})
+	store.Folders.Add(&bindings.Folder{Active: true, Country: []int{3}, CPC: 700, Children: []int{badfolder}})
+	randpick := store.Folders.Add(&bindings.Folder{Active: true, OwnerID: own, Country: []int{3}, Brand: []int{6}, CPC: 500, Creative: []int{crid}})
 	_ = randpick
-	store.Folders.Add(&bindings.Folder{Country: []int{3}, Brand: []int{6}, CPC: 250})
+	store.Folders.Add(&bindings.Folder{Active: true, Country: []int{3}, Brand: []int{6}, CPC: 250})
 
 	flight.Request.RawRequest.Impressions = []rtb_types.Impression{{}}
 	flight.Request.CountryID = 3
@@ -64,13 +64,17 @@ func TestStageFindClient(t *testing.T) {
 }
 
 func TestWhitelist(t *testing.T) {
+	l, fin := bindings.BufferedLogger(t)
 	flight := &DemandFlight{}
-	f := flight.Runtime.Storage.Folders.ByID(flight.Runtime.Storage.Folders.Add(&bindings.Folder{Creative: []int{3}, Network: []int{1, 2}}))
+	flight.Runtime.Logic = SimpleLogic{}
+	flight.Runtime.Logger = l
+	f := flight.Runtime.Storage.Folders.ByID(flight.Runtime.Storage.Folders.Add(&bindings.Folder{Active: true, Creative: []int{3}, Network: []int{1, 2}}))
 	flight.Request.NetworkID = 2
 	FindClient(flight)
 	if flight.FolderID != f.ID {
 		t.Error("wrong folder selected, wanted", f.ID, "got", flight.FolderID)
 	}
+	fin()
 }
 
 func TestLoadAll(t *testing.T) {

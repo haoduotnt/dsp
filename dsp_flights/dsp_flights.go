@@ -168,6 +168,7 @@ func (df *DemandFlight) Launch() {
 	}()
 	ReadBidRequest(df)
 	FindClient(df)
+	PrepareResponse(df)
 	WriteBidResponse(df)
 }
 
@@ -240,55 +241,87 @@ func FindClient(flight *DemandFlight) {
 		return
 	}
 
-	bid := rtb_types.Bid{}
-
 	FolderMatches := func(folder *bindings.Folder) string {
 		if !folder.Active {
 			return "Inactive"
 		}
 		if !flight.Request.RawRequest.Test {
-			if len(folder.Country) > 0 {
-				if flight.Request.CountryID != folder.Country {
-					return "Country"
-				}
-			}
-		}
-		if len(folder.Brand) > 0 {
-			if flight.Request.BrandID != folder.Brand {
-				return "Brand"
-			}
-		}
-		if len(folder.Network) > 0 {
-			if flight.Request.NetworkID != folder.Network {
-				return "Network"
-			}
-		}
-		if len(folder.NetworkType) > 0 {
-			if flight.Request.NetworkTypeID != folder.NetworkType {
-				return "NetworkType"
-			}
-		}
-		if len(folder.SubNetwork) > 0 {
-			if flight.Request.SubNetworkID != folder.SubNetwork {
-				return "SubNetwork"
-			}
-		}
-		if len(folder.Gender) > 0 {
-			if flight.Request.GenderID != folder.Gender {
-				return "Gender"
-			}
-		}
-		if len(folder.DeviceType) > 0 {
-			if flight.Request.DeviceTypeID != folder.DeviceType {
-				return "DeviceType"
-			}
-		}
-		if len(folder.Vertical) > 0 {
-			if flight.Request.VerticalID != folder.Vertical {
-				return "Vertical"
-			}
+			goto CheckCountry
 		}
 
+	CheckCountry:
+		if len(folder.Country) > 0 {
+			for _, c := range folder.Country {
+				if flight.Request.CountryID == c {
+					goto CheckBrand
+				}
+			}
+			return "Country"
+		}
+	CheckBrand:
+		if len(folder.Brand) > 0 {
+			for _, v := range folder.Brand {
+				if flight.Request.BrandID == v {
+					goto CheckNetwork
+				}
+			}
+			return "Brand"
+		}
+	CheckNetwork:
+		if len(folder.Network) > 0 {
+			for _, v := range folder.Network {
+				if flight.Request.NetworkID == v {
+					goto CheckNetworkType
+				}
+			}
+			return "Network"
+		}
+	CheckNetworkType:
+		if len(folder.NetworkType) > 0 {
+			for _, v := range folder.NetworkType {
+				if flight.Request.NetworkTypeID == v {
+					goto CheckSubNetwork
+				}
+			}
+			return "NetworkType"
+		}
+	CheckSubNetwork:
+		if len(folder.SubNetwork) > 0 {
+			for _, v := range folder.SubNetwork {
+				if flight.Request.SubNetworkID == v {
+					goto CheckGender
+				}
+			}
+			return "SubNetwork"
+		}
+	CheckGender:
+		if len(folder.Gender) > 0 {
+			for _, v := range folder.Gender {
+				if flight.Request.GenderID == v {
+					goto CheckDeviceType
+				}
+			}
+			return "Gender"
+		}
+	CheckDeviceType:
+		if len(folder.DeviceType) > 0 {
+			for _, v := range folder.DeviceType {
+				if flight.Request.DeviceTypeID == v {
+					goto CheckVertical
+				}
+			}
+			return "DeviceType"
+		}
+	CheckVertical:
+		if len(folder.Vertical) > 0 {
+			for _, v := range folder.Vertical {
+				if flight.Request.VerticalID == v {
+					goto CheckBidfloor
+				}
+			}
+			return "Vertical"
+		}
+	CheckBidfloor:
 		if folder.CPC > 0 && folder.CPC < flight.Request.RawRequest.Impressions[0].BidFloor {
 			return "CPC"
 		}
@@ -337,11 +370,14 @@ func FindClient(flight *DemandFlight) {
 	}
 
 	flight.Runtime.Logic.SelectFolderAndCreative(flight, folders, totalCpc)
+}
 
+func PrepareResponse(flight *DemandFlight) {
 	revShare := flight.Runtime.Logic.CalculateRevshare(flight)
 	if revShare > 100 {
 		revShare = 100
 	}
+	bid := rtb_types.Bid{}
 	flight.Runtime.Logger.Printf("rev calculated at %f", revShare)
 	bid.Price = float64(flight.FullPrice) * revShare / 100
 	flight.Margin = flight.FullPrice - int(bid.Price)
