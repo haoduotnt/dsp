@@ -63,6 +63,16 @@ func TestStageFindClient(t *testing.T) {
 	}
 }
 
+func TestWhitelist(t *testing.T) {
+	flight := &DemandFlight{}
+	f := flight.Runtime.Storage.Folders.ByID(flight.Runtime.Storage.Folders.Add(&bindings.Folder{Creative: []int{3}, Network: []int{1, 2}}))
+	flight.Request.NetworkID = 2
+	FindClient(flight)
+	if flight.FolderID != f.ID {
+		t.Error("wrong folder selected, wanted", f.ID, "got", flight.FolderID)
+	}
+}
+
 func TestLoadAll(t *testing.T) {
 	db, sqlm, _ := sqlmock.New()
 
@@ -75,7 +85,7 @@ func TestLoadAll(t *testing.T) {
 			AddRow(100, 50, 30, 5, "live"))
 	sqlm.ExpectQuery("parent_folder").WithArgs(5).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("7"))
 	sqlm.ExpectQuery("parent_folder").WithArgs(5).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("8"))
-	sqlm.ExpectQuery("dimentions").WithArgs(5).WillReturnRows(sqlmock.NewRows([]string{"a", "b"}))
+	sqlm.ExpectQuery("dimentions").WithArgs(5).WillReturnRows(sqlmock.NewRows([]string{"a", "b"}).AddRow(1, "Network").AddRow(2, "Network"))
 
 	sqlm.ExpectQuery("creatives").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(5))
 	sqlm.ExpectQuery("creatives").WithArgs(5).
@@ -108,12 +118,16 @@ func TestLoadAll(t *testing.T) {
 	sqlm.MatchExpectationsInOrder(false)
 
 	out, dump := bindings.BufferedLogger(t)
-	if err := (&BidEntrypoint{BindingDeps: bindings.BindingDeps{ConfigDB: db, StatsDB: db, Logger: out, Debug: out, DefaultKey: ":", Redis: redis.NewClient(&redis.Options{})}}).Cycle(); err != nil {
+	be := &BidEntrypoint{BindingDeps: bindings.BindingDeps{ConfigDB: db, StatsDB: db, Logger: out, Debug: out, DefaultKey: ":", Redis: redis.NewClient(&redis.Options{})}}
+	if err := be.Cycle(); err != nil {
 		t.Log("failed to cycle, dumping")
 		dump()
 		t.Log("err", err.Error())
 	} else {
 		dump()
+	}
+	if be.DemandFlight().Runtime.Storage.Folders.ByID(5).Network[1] != 2 {
+		t.Error("missing second network in folder whitelist")
 	}
 	if err := sqlm.ExpectationsWereMet(); err != nil {
 		t.Error("err", err.Error())

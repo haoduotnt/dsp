@@ -333,28 +333,28 @@ func (d *Dimension) Transfer(f *Folder) error {
 	parts := strings.Split(d.Type, `\`)
 	switch parts[len(parts)-1] {
 	case `Vertical`:
-		f.Vertical = d.Value
+		f.Vertical = append(f.Vertical, d.Value)
 		return nil
 	case `Country`:
-		f.Country = d.Value
+		f.Country = append(f.Country, d.Value)
 		return nil
 	case `Brand`:
-		f.Brand = d.Value
+		f.Brand = append(f.Brand, d.Value)
 		return nil
 	case `Network`:
-		f.Network = d.Value
+		f.Network = append(f.Network, d.Value)
 		return nil
 	case `SubNetwork`:
-		f.SubNetwork = d.Value
+		f.SubNetwork = append(f.SubNetwork, d.Value)
 		return nil
 	case `NetworkType`:
-		f.NetworkType = d.Value
+		f.NetworkType = append(f.NetworkType, d.Value)
 		return nil
 	case `Gender`:
-		f.Gender = d.Value
+		f.Gender = append(f.Gender, d.Value)
 		return nil
 	case `DeviceType`:
-		f.DeviceType = d.Value
+		f.DeviceType = append(f.DeviceType, d.Value)
 		return nil
 	default:
 		return fmt.Errorf(`unknown type: %s`, d.Type)
@@ -370,14 +370,14 @@ type Folder struct {
 	Budget   int
 	OwnerID  int
 
-	Vertical    int
-	Country     int
-	Brand       int
-	Network     int
-	SubNetwork  int
-	NetworkType int
-	Gender      int
-	DeviceType  int
+	Vertical    []int
+	Country     []int
+	Brand       []int
+	Network     []int
+	SubNetwork  []int
+	NetworkType []int
+	Gender      []int
+	DeviceType  []int
 
 	Active bool
 
