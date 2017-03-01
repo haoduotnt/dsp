@@ -373,6 +373,9 @@ func FindClient(flight *DemandFlight) {
 }
 
 func PrepareResponse(flight *DemandFlight) {
+	if flight.FolderID == 0 {
+		return
+	}
 	revShare := flight.Runtime.Logic.CalculateRevshare(flight)
 	if revShare > 100 {
 		revShare = 100
