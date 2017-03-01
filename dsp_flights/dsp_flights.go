@@ -247,30 +247,46 @@ func FindClient(flight *DemandFlight) {
 			return "Inactive"
 		}
 		if !flight.Request.RawRequest.Test {
-			if folder.Country > 0 && flight.Request.CountryID != folder.Country {
-				return "Country"
+			if len(folder.Country) > 0 {
+				if flight.Request.CountryID != folder.Country {
+					return "Country"
+				}
 			}
 		}
-		if folder.Brand > 0 && flight.Request.BrandID != folder.Brand {
-			return "Brand"
+		if len(folder.Brand) > 0 {
+			if flight.Request.BrandID != folder.Brand {
+				return "Brand"
+			}
 		}
-		if folder.Network > 0 && flight.Request.NetworkID != folder.Network {
-			return "Network"
+		if len(folder.Network) > 0 {
+			if flight.Request.NetworkID != folder.Network {
+				return "Network"
+			}
 		}
-		if folder.NetworkType > 0 && flight.Request.NetworkTypeID != folder.NetworkType {
-			return "NetworkType"
+		if len(folder.NetworkType) > 0 {
+			if flight.Request.NetworkTypeID != folder.NetworkType {
+				return "NetworkType"
+			}
 		}
-		if folder.SubNetwork > 0 && flight.Request.SubNetworkID != folder.SubNetwork {
-			return "SubNetwork"
+		if len(folder.SubNetwork) > 0 {
+			if flight.Request.SubNetworkID != folder.SubNetwork {
+				return "SubNetwork"
+			}
 		}
-		if folder.Gender > 0 && flight.Request.GenderID != folder.Gender {
-			return "Gender"
+		if len(folder.Gender) > 0 {
+			if flight.Request.GenderID != folder.Gender {
+				return "Gender"
+			}
 		}
-		if folder.DeviceType > 0 && flight.Request.DeviceTypeID != folder.DeviceType {
-			return "DeviceType"
+		if len(folder.DeviceType) > 0 {
+			if flight.Request.DeviceTypeID != folder.DeviceType {
+				return "DeviceType"
+			}
 		}
-		if folder.Vertical > 0 && flight.Request.VerticalID != folder.Vertical {
-			return "Vertical"
+		if len(folder.Vertical) > 0 {
+			if flight.Request.VerticalID != folder.Vertical {
+				return "Vertical"
+			}
 		}
 
 		if folder.CPC > 0 && folder.CPC < flight.Request.RawRequest.Impressions[0].BidFloor {

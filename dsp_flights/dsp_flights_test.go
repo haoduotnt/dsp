@@ -26,15 +26,15 @@ func TestStageFindClient(t *testing.T) {
 	crid := store.Creatives.Add(&bindings.Creative{})
 	own := store.Users.Add(&bindings.User{Age: 10})
 
-	bfid := store.Folders.Add(&bindings.Folder{OwnerID: own, Brand: 6, Creative: []int{crid}, CPC: 350})
-	store.Folders.Add(&bindings.Folder{Country: 3, Children: []int{bfid}, CPC: 500})
-	store.Folders.Add(&bindings.Folder{Country: 4, CPC: 500})
-	store.Folders.Add(&bindings.Folder{Country: 3, Brand: 6, CPC: 50})
-	badfolder := store.Folders.Add(&bindings.Folder{OwnerID: own, Country: 3, CPC: 50})
-	store.Folders.Add(&bindings.Folder{Country: 3, CPC: 700, Children: []int{badfolder}})
-	randpick := store.Folders.Add(&bindings.Folder{OwnerID: own, Country: 3, Brand: 6, CPC: 500, Creative: []int{crid}})
+	bfid := store.Folders.Add(&bindings.Folder{OwnerID: own, Brand: []int{6}, Creative: []int{crid}, CPC: 350})
+	store.Folders.Add(&bindings.Folder{Country: []int{3}, Children: []int{bfid}, CPC: 500})
+	store.Folders.Add(&bindings.Folder{Country: []int{4}, CPC: 500})
+	store.Folders.Add(&bindings.Folder{Country: []int{3}, Brand: []int{6}, CPC: 50})
+	badfolder := store.Folders.Add(&bindings.Folder{OwnerID: own, Country: []int{3}, CPC: 50})
+	store.Folders.Add(&bindings.Folder{Country: []int{3}, CPC: 700, Children: []int{badfolder}})
+	randpick := store.Folders.Add(&bindings.Folder{OwnerID: own, Country: []int{3}, Brand: []int{6}, CPC: 500, Creative: []int{crid}})
 	_ = randpick
-	store.Folders.Add(&bindings.Folder{Country: 3, Brand: 6, CPC: 250})
+	store.Folders.Add(&bindings.Folder{Country: []int{3}, Brand: []int{6}, CPC: 250})
 
 	flight.Request.RawRequest.Impressions = []rtb_types.Impression{{}}
 	flight.Request.CountryID = 3
