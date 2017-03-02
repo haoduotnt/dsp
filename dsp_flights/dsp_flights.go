@@ -249,7 +249,6 @@ func FindClient(flight *DemandFlight) {
 			goto CheckBrand
 		}
 
-	CheckCountry:
 		if len(folder.Country) > 0 {
 			for _, c := range folder.Country {
 				if flight.Request.CountryID == c {
