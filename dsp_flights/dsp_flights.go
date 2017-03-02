@@ -246,7 +246,7 @@ func FindClient(flight *DemandFlight) {
 			return "Inactive"
 		}
 		if !flight.Request.RawRequest.Test {
-			goto CheckCountry
+			goto CheckBrand
 		}
 
 	CheckCountry:
