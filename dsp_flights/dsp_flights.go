@@ -245,7 +245,7 @@ func FindClient(flight *DemandFlight) {
 		if !folder.Active {
 			return "Inactive"
 		}
-		if !flight.Request.RawRequest.Test {
+		if flight.Request.RawRequest.Test {
 			goto CheckBrand
 		}
 
