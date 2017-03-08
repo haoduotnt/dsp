@@ -6,7 +6,6 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/clixxa/dsp/bindings"
 	"github.com/clixxa/dsp/rtb_types"
-	"gopkg.in/redis.v5"
 	"testing"
 )
 
@@ -122,7 +121,7 @@ func TestLoadAll(t *testing.T) {
 	sqlm.MatchExpectationsInOrder(false)
 
 	out, dump := bindings.BufferedLogger(t)
-	be := &BidEntrypoint{BindingDeps: bindings.BindingDeps{ConfigDB: db, StatsDB: db, Logger: out, Debug: out, DefaultKey: ":", Redis: redis.NewClient(&redis.Options{})}}
+	be := &BidEntrypoint{BindingDeps: bindings.BindingDeps{ConfigDB: db, StatsDB: db, Logger: out, Debug: out, DefaultKey: ":", Redis: &bindings.RandomCache{&bindings.CountingCache{}}}}
 	if err := be.Cycle(); err != nil {
 		t.Log("failed to cycle, dumping")
 		dump()

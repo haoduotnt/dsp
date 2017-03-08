@@ -6,12 +6,9 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	"gopkg.in/redis.v5"
 	"log"
-	"math/rand"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type BindingDeps struct {
@@ -20,7 +17,7 @@ type BindingDeps struct {
 	Debug      *log.Logger
 	Logger     *log.Logger
 	DefaultKey string
-	Redis      *redis.Client
+	Redis      *RandomCache
 }
 
 func tojson(i interface{}) string {
@@ -610,52 +607,22 @@ func (s StatsDB) Marshal(db *sql.DB) error {
 }
 
 type Recalls struct {
-	Env      BindingDeps
-	SkipWork bool
+	Env BindingDeps
 }
 
 func (s Recalls) Save(f json.Marshaler, errLoc *error, idLoc *int) {
 	js, _ := f.MarshalJSON()
-	if s.SkipWork {
-		return
-	}
-
-	for attempt := 0; attempt < 5; attempt += 1 {
-		rec := int(rand.Int63())
-		res := s.Env.Redis.SetNX(strconv.Itoa(rec), js, 10*time.Minute)
-		if err := res.Err(); err != nil {
-			*errLoc = err
-			s.Env.Logger.Println(`err saving recall`, err.Error())
-			return
-		}
-		if res.Val() {
-			s.Env.Logger.Println(`saved with id`, rec)
-			*idLoc = rec
-			return
-		}
-	}
-
-	*errLoc = fmt.Errorf(`couldnt find available id for recall`)
-	return
+	*idLoc, *errLoc = s.Env.Redis.FindID(string(js))
 }
 
 func (s Recalls) Fetch(f json.Unmarshaler, errLoc *error, recall string) {
-	if s.SkipWork {
+	key, parseErr := strconv.Atoi(recall)
+	if parseErr != nil {
+		*errLoc = parseErr
 		return
 	}
-
-	cmd := s.Env.Redis.Get(recall)
-	if err := cmd.Err(); err != nil {
-		*errLoc = err
-		s.Env.Logger.Println(`err fetching recall`, err.Error())
-		return
-	}
-
-	var target string
-	if raw, err := cmd.Result(); err == nil {
-		target = raw
-	} else {
-		s.Env.Logger.Println(`couldn't find in redis, looking in postgres`, err.Error())
+	target, err := s.Env.Redis.Load(key)
+	if err != nil {
 		*errLoc = err
 		return
 	}

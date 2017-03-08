@@ -6,10 +6,12 @@ import (
 	"gopkg.in/redis.v5"
 	"log"
 	"os"
+	"strings"
 )
 
 type ProductionDepsService struct {
 	BindingDeps bindings.BindingDeps
+	RedisStr    string
 }
 
 func (p *ProductionDepsService) ConfigDSN() *bindings.DSN {
@@ -52,11 +54,20 @@ func (p *ProductionDepsService) Cycle() error {
 		p.BindingDeps.DefaultKey = os.Getenv("TDEFAULTKEY")
 	}
 
-	if p.BindingDeps.Redis == nil {
-		p.BindingDeps.Redis = redis.NewClient(&redis.Options{Addr: p.RedisDSN()})
-		if err := p.BindingDeps.Redis.Ping().Err(); err != nil {
-			return err
+	if str := p.RedisDSN(); str != p.RedisStr {
+		p.RedisStr = str
+
+		sh := &bindings.ShardSystem{Fallback: p.BindingDeps.Redis}
+		for _, url := range strings.Split(str, ",") {
+			r := &bindings.RecallRedis{redis.NewClient(&redis.Options{Addr: url})}
+			sh.Children = append(sh.Children, r)
+			if err := r.Ping().Err(); err != nil {
+				return err
+			}
 		}
+		rc2 := &bindings.RandomCache{sh}
+		p.BindingDeps.Redis = rc2
+
 	}
 
 	if p.BindingDeps.ConfigDB == nil {
