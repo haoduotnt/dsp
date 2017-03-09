@@ -3,13 +3,14 @@ package bindings
 import (
 	"errors"
 	"gopkg.in/redis.v5"
+	"hash/crc32"
 	"math/rand"
 	"strconv"
 	"time"
 )
 
 type CacheSystem interface {
-	Store(int, string) error
+	Store(string, string) error
 	Load(string) (string, error)
 }
 
@@ -21,7 +22,7 @@ func (r *RandomCache) FindID(val string) (int, error) {
 	attempt := 0
 	for {
 		rec := int(rand.Int63())
-		if err := r.Store(rec, val); err != nil && attempt > 5 {
+		if err := r.Store(strconv.Itoa(rec), val); err != nil && attempt > 5 {
 			return 0, err
 		} else if err == nil {
 			return rec, nil
@@ -35,15 +36,19 @@ type ShardSystem struct {
 	Fallback CacheSystem
 }
 
-func (s *ShardSystem) Store(key int, val string) error {
+func (s *ShardSystem) Store(keyStr string, val string) error {
+	key, err := strconv.Atoi(keyStr)
+	if err != nil {
+		key = int(crc32.ChecksumIEEE([]byte(keyStr)))
+	}
 	pick := s.Children[key%len(s.Children)]
-	return pick.Store(key, val)
+	return pick.Store(keyStr, val)
 }
 
 func (s *ShardSystem) Load(keyStr string) (string, error) {
 	key, err := strconv.Atoi(keyStr)
 	if err != nil {
-		return "", err
+		key = int(crc32.ChecksumIEEE([]byte(keyStr)))
 	}
 	pick := s.Children[key%len(s.Children)]
 
@@ -60,7 +65,11 @@ type RecallRedis struct {
 	*redis.Client
 }
 
-func (r *RecallRedis) Store(key int, val string) error {
+func (r *RecallRedis) Store(keyStr string, val string) error {
+	key, err := strconv.Atoi(keyStr)
+	if err != nil {
+		key = int(crc32.ChecksumIEEE([]byte(keyStr)))
+	}
 	res := r.SetNX(strconv.Itoa(key), val, 10*time.Minute)
 	if err := res.Err(); err != nil {
 		return err
@@ -84,7 +93,11 @@ type CountingCache struct {
 	n        int
 }
 
-func (s *CountingCache) Store(key int, val string) error {
+func (s *CountingCache) Store(keyStr string, val string) error {
+	key, parseErr := strconv.Atoi(keyStr)
+	if parseErr != nil {
+		key = int(crc32.ChecksumIEEE([]byte(keyStr)))
+	}
 	_, err := s.Callback(s.n, []interface{}{key, val})
 	s.n++
 	return err
@@ -93,7 +106,7 @@ func (s *CountingCache) Store(key int, val string) error {
 func (s *CountingCache) Load(keyStr string) (string, error) {
 	key, err := strconv.Atoi(keyStr)
 	if err != nil {
-		return "", err
+		key = int(crc32.ChecksumIEEE([]byte(keyStr)))
 	}
 	s.n++
 	return s.Callback(s.n-1, key)

@@ -40,5 +40,19 @@ func TestRetryWithSharding(t *testing.T) {
 	} else if val != str {
 		t.Error("incorrect return val")
 	}
+}
 
+func TestNonIntSharding(t *testing.T) {
+	cb := func(n int, args interface{}) (string, error) {
+		t.Log(n, "called with", args)
+		return "world", nil
+	}
+	r := &CountingCache{Callback: cb}
+	sh := &ShardSystem{Children: []CacheSystem{r, r}}
+	sh.Store("hello", "world")
+	out, err := sh.Load("hello")
+	t.Log(err)
+	if out != "world" {
+		t.Error("unmet expectation")
+	}
 }
