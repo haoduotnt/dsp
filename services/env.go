@@ -12,6 +12,7 @@ import (
 type ProductionDepsService struct {
 	BindingDeps bindings.BindingDeps
 	RedisStr    string
+	Consul      *ConsulConfigs
 }
 
 func (p *ProductionDepsService) ConfigDSN() *bindings.DSN {
@@ -37,6 +38,9 @@ func (p *ProductionDepsService) StatsDSN() *bindings.DSN {
 }
 
 func (p *ProductionDepsService) RedisDSN() string {
+	if p.Consul.RedisUrls != "" {
+		return p.Consul.RedisUrls
+	}
 	return os.Getenv("TRECALLURL")
 }
 

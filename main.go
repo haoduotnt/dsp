@@ -15,7 +15,8 @@ type Main struct {
 }
 
 func (m *Main) Launch() {
-	deps := &services.ProductionDepsService{}
+	consul := &services.ConsulConfigs{}
+	deps := &services.ProductionDepsService{Consul: consul}
 
 	dspRuntime := &dsp_flights.BidEntrypoint{AllTest: m.TestOnly, Logic: dsp_flights.SimpleLogic{}}
 	winRuntime := &wish_flights.WishEntrypoint{}
@@ -39,7 +40,7 @@ func (m *Main) Launch() {
 		return nil
 	}}
 
-	cycler.Children = append(cycler.Children, deps, wireUp, dspRuntime, winRuntime)
+	cycler.Children = append(cycler.Children, consul, deps, wireUp, dspRuntime, winRuntime)
 	launch.Children = append(launch.Children, cycler, router)
 
 	fmt.Println("starting launcher")
