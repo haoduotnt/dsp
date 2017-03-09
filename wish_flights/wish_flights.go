@@ -68,18 +68,18 @@ type WinFlight struct {
 	HttpRequest  *http.Request       `json:"-"`
 	HttpResponse http.ResponseWriter `json:"-"`
 
+	FolderID   int                 `json:"folder"`
+	CreativeID int                 `json:"creative"`
+	Request    dsp_flights.Request `json:"req"`
+	Margin     int                 `json:"margin"`
+	StartTime  time.Time
+
 	RevTXHome int    `json:"-"`
 	PaidPrice int    `json:"-"`
 	RecallID  string `json:"-"`
 	SaleID    int    `json:"-"`
 
-	FolderID   int                 `json:"folder"`
-	CreativeID int                 `json:"creative"`
-	Margin     int                 `json:"margin"`
-	Request    dsp_flights.Request `json:"req"`
-
-	StartTime time.Time
-	Error     error `json:"-"`
+	Error error `json:"-"`
 }
 
 func (wf *WinFlight) String() string {

@@ -5,6 +5,14 @@ import (
 	"time"
 )
 
+type ErrAllowed struct {
+	UnderlyingErr error
+}
+
+func (e ErrAllowed) Error() string {
+	return "ignored: " + e.UnderlyingErr.Error()
+}
+
 type CycleService struct {
 	BindingDeps bindings.BindingDeps
 	Children    []interface {
@@ -31,7 +39,9 @@ func (c *CycleService) cycleAll() error {
 	for _, ch := range c.Children {
 		if err := ch.Cycle(); err != nil {
 			c.BindingDeps.Logger.Printf("failed to cycle child %#v, err: %s", ch, err.Error())
-			return err
+			if _, ok := err.(ErrAllowed); !ok {
+				return err
+			}
 		}
 	}
 	return nil

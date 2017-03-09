@@ -128,20 +128,18 @@ type DemandFlight struct {
 	HttpRequest  *http.Request       `json:"-"`
 	HttpResponse http.ResponseWriter `json:"-"`
 
-	Response rtb_types.Response `json:"-"`
-
-	StartTime time.Time
-
 	FolderID   int     `json:"folder"`
 	CreativeID int     `json:"creative"`
 	Request    Request `json:"req"`
 	Margin     int     `json:"margin"`
+	StartTime  time.Time
 
 	RecallID  int    `json:"-"`
 	FullPrice int    `json:"-"`
 	WinUrl    string `json:"-"`
 
-	Error error `json:"-"`
+	Response rtb_types.Response `json:"-"`
+	Error    error              `json:"-"`
 }
 
 type dfProxy DemandFlight

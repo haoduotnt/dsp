@@ -13,11 +13,17 @@ type LaunchService struct {
 }
 
 func (l *LaunchService) Launch() error {
+	l.Errors = make(chan error, 10)
 	for _, ch := range l.Children {
 		if err := ch.Launch(l.Errors); err != nil {
 			return err
 		}
 		l.BindingDeps.Logger.Println("launched", ch)
 	}
-	return <-l.Errors
+	go func() {
+		for err := range l.Errors {
+			l.BindingDeps.Logger.Println("CYCLE ERR", err)
+		}
+	}()
+	return nil
 }

@@ -14,7 +14,7 @@ func (c *ConsulConfigs) Cycle() error {
 	if c.Client == nil {
 		client, err := api.NewClient(api.DefaultConfig())
 		if err != nil {
-			return err
+			return ErrAllowed{err}
 		}
 		c.Client = client
 		c.KV = client.KV()
@@ -22,7 +22,7 @@ func (c *ConsulConfigs) Cycle() error {
 
 	pair, _, err := c.KV.Get("ms/redis/urls", nil)
 	if err != nil {
-		return err
+		return ErrAllowed{err}
 	}
 	c.RedisUrls = string(pair.Value)
 	return nil
