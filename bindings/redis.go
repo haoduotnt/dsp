@@ -66,11 +66,7 @@ type RecallRedis struct {
 }
 
 func (r *RecallRedis) Store(keyStr string, val string) error {
-	key, err := strconv.Atoi(keyStr)
-	if err != nil {
-		key = int(crc32.ChecksumIEEE([]byte(keyStr)))
-	}
-	res := r.SetNX(strconv.Itoa(key), val, 10*time.Minute)
+	res := r.SetNX(keyStr, val, 10*time.Minute)
 	if err := res.Err(); err != nil {
 		return err
 	}
@@ -94,20 +90,12 @@ type CountingCache struct {
 }
 
 func (s *CountingCache) Store(keyStr string, val string) error {
-	key, parseErr := strconv.Atoi(keyStr)
-	if parseErr != nil {
-		key = int(crc32.ChecksumIEEE([]byte(keyStr)))
-	}
-	_, err := s.Callback(s.n, []interface{}{key, val})
+	_, err := s.Callback(s.n, []interface{}{keyStr, val})
 	s.n++
 	return err
 }
 
 func (s *CountingCache) Load(keyStr string) (string, error) {
-	key, err := strconv.Atoi(keyStr)
-	if err != nil {
-		key = int(crc32.ChecksumIEEE([]byte(keyStr)))
-	}
 	s.n++
-	return s.Callback(s.n-1, key)
+	return s.Callback(s.n-1, keyStr)
 }
