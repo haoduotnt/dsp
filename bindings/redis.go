@@ -10,7 +10,7 @@ import (
 
 type CacheSystem interface {
 	Store(int, string) error
-	Load(int) (string, error)
+	Load(string) (string, error)
 }
 
 type RandomCache struct {
@@ -40,12 +40,16 @@ func (s *ShardSystem) Store(key int, val string) error {
 	return pick.Store(key, val)
 }
 
-func (s *ShardSystem) Load(key int) (string, error) {
+func (s *ShardSystem) Load(keyStr string) (string, error) {
+	key, err := strconv.Atoi(keyStr)
+	if err != nil {
+		return "", err
+	}
 	pick := s.Children[key%len(s.Children)]
 
-	res, err := pick.Load(key)
+	res, err := pick.Load(keyStr)
 	if err != nil && s.Fallback != nil {
-		res, err = s.Fallback.Load(key)
+		res, err = s.Fallback.Load(keyStr)
 	}
 	return res, err
 }
@@ -67,8 +71,8 @@ func (r *RecallRedis) Store(key int, val string) error {
 	return CantStoreErr
 }
 
-func (r *RecallRedis) Load(key int) (string, error) {
-	cmd := r.Get(strconv.Itoa(key))
+func (r *RecallRedis) Load(keyStr string) (string, error) {
+	cmd := r.Get(keyStr)
 	if err := cmd.Err(); err != nil {
 		return "", err
 	}
@@ -86,7 +90,11 @@ func (s *CountingCache) Store(key int, val string) error {
 	return err
 }
 
-func (s *CountingCache) Load(key int) (string, error) {
+func (s *CountingCache) Load(keyStr string) (string, error) {
+	key, err := strconv.Atoi(keyStr)
+	if err != nil {
+		return "", err
+	}
 	s.n++
 	return s.Callback(s.n-1, key)
 }

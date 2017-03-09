@@ -2,6 +2,7 @@ package bindings
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -34,7 +35,7 @@ func TestRetryWithSharding(t *testing.T) {
 	str := "test"
 	id, err := rc1.FindID(str)
 	t.Log("recieved id and err", id, err)
-	if val, err := rc2.Load(id); err != nil {
+	if val, err := rc2.Load(strconv.Itoa(id)); err != nil {
 		t.Error(err)
 	} else if val != str {
 		t.Error("incorrect return val")

@@ -616,12 +616,7 @@ func (s Recalls) Save(f json.Marshaler, errLoc *error, idLoc *int) {
 }
 
 func (s Recalls) Fetch(f json.Unmarshaler, errLoc *error, recall string) {
-	key, parseErr := strconv.Atoi(recall)
-	if parseErr != nil {
-		*errLoc = parseErr
-		return
-	}
-	target, err := s.Env.Redis.Load(key)
+	target, err := s.Env.Redis.Load(recall)
 	if err != nil {
 		*errLoc = err
 		return
