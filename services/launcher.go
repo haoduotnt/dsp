@@ -25,5 +25,6 @@ func (l *LaunchService) Launch() error {
 			l.BindingDeps.Logger.Println("CYCLE ERR", err)
 		}
 	}()
+	select {}
 	return nil
 }
