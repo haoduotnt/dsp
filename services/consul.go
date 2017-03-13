@@ -11,7 +11,7 @@ type ConsulConfigs struct {
 	RedisUrls string
 }
 
-const KeyMissing = errors.New("Key Missing")
+var KeyMissing = errors.New("Key Missing")
 
 func (c *ConsulConfigs) Cycle() error {
 	if c.Client == nil {
