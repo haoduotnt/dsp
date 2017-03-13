@@ -40,27 +40,30 @@ func (r *RandomCache) FindID(val string) (int, error) {
 }
 
 type ShardSystem struct {
-	Children []CacheSystem
-	Fallback CacheSystem
+	Children   []CacheSystem
+	Fallback   CacheSystem
+	totalCount uint64
 }
 
 func (s *ShardSystem) Store(keyStr string, val string) error {
+	atomic.AddUint64(&s.totalCount, 1)
+	return s.Pick(keyStr).Store(keyStr, val)
+}
+
+func (s *ShardSystem) Pick(keyStr string) CacheSystem {
 	key, err := strconv.Atoi(keyStr)
 	if err != nil {
 		key = int(crc32.ChecksumIEEE([]byte(keyStr)))
 	}
-	pick := s.Children[key%len(s.Children)]
-	return pick.Store(keyStr, val)
+	p := key % len(s.Children)
+	ch := s.Children[p]
+	fmt.Printf("keyStr %s (key %d) picked %d (%s)\n", keyStr, key, p, ch)
+	return ch
 }
 
 func (s *ShardSystem) Load(keyStr string) (string, error) {
-	key, err := strconv.Atoi(keyStr)
-	if err != nil {
-		key = int(crc32.ChecksumIEEE([]byte(keyStr)))
-	}
-	pick := s.Children[key%len(s.Children)]
-
-	res, err := pick.Load(keyStr)
+	atomic.AddUint64(&s.totalCount, 1)
+	res, err := s.Pick(keyStr).Load(keyStr)
 	if err != nil && s.Fallback != nil {
 		res, err = s.Fallback.Load(keyStr)
 	}
@@ -68,7 +71,11 @@ func (s *ShardSystem) Load(keyStr string) (string, error) {
 }
 
 func (s *ShardSystem) String() string {
-	str := []string{"shard system counts.."}
+	count := atomic.SwapUint64(&s.totalCount, 0)
+	if count == 0 {
+		return ""
+	}
+	str := []string{fmt.Sprintf("shard system counts (total %d)..", count)}
 	for i, child := range s.Children {
 		str = append(str, fmt.Sprintf(`child %d: %s`, i, child.String()))
 	}
@@ -113,14 +120,19 @@ type CountingCache struct {
 	n        int
 }
 
-func (s *CountingCache) Store(keyStr string, val string) error {
-	_, err := s.Callback(s.n, []interface{}{keyStr, val})
+func (s *CountingCache) Store(keyStr string, val string) (err error) {
+	if s.Callback != nil {
+		_, err = s.Callback(s.n, []interface{}{keyStr, val})
+	}
 	s.n++
-	return err
+	return
 }
 
 func (s *CountingCache) Load(keyStr string) (string, error) {
 	s.n++
+	if s.Callback != nil {
+		return "", nil
+	}
 	return s.Callback(s.n-1, keyStr)
 }
 

@@ -56,3 +56,20 @@ func TestNonIntSharding(t *testing.T) {
 		t.Error("unmet expectation")
 	}
 }
+
+func TestPicks(t *testing.T) {
+	r1 := &CountingCache{}
+	r2 := &CountingCache{}
+	sh := &ShardSystem{Children: []CacheSystem{r1, r2, r2}}
+	p := sh.Pick("102")
+	t.Log(p)
+	if p != r1 {
+		t.Fail()
+	}
+	t.Log(sh)
+	p.Store("h", "a")
+	t.Log(p, sh)
+
+	sh.Pick("9e0mCxci7xnttCYfFkUtHVaExZg=")
+	sh.Pick("hello worlh")
+}

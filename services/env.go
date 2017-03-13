@@ -62,7 +62,10 @@ func (p *ProductionDepsService) Cycle() error {
 	if p.BindingDeps.Redis != nil {
 		go func(oldredis *bindings.RandomCache) {
 			time.Sleep(4 * time.Second)
-			p.BindingDeps.Logger.Println("redis dump", p.BindingDeps.Redis.String())
+			s := p.BindingDeps.Redis.String()
+			if s != "" {
+				p.BindingDeps.Logger.Println("redis dump")
+			}
 		}(p.BindingDeps.Redis)
 	}
 
