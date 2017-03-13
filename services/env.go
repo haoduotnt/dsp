@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
 type ProductionDepsService struct {
@@ -61,9 +62,16 @@ func (p *ProductionDepsService) Cycle() error {
 	if str := p.RedisDSN(); str != p.RedisStr {
 		p.RedisStr = str
 
+		if p.BindingDeps.Redis != nil {
+			go func(oldredis *bindings.RandomCache) {
+				time.Sleep(4 * time.Second)
+				p.BindingDeps.Logger.Println("redis dump", p.BindingDeps.Redis.String())
+			}(p.BindingDeps.Redis)
+		}
 		sh := &bindings.ShardSystem{Fallback: p.BindingDeps.Redis}
 		for _, url := range strings.Split(str, ",") {
-			r := &bindings.RecallRedis{redis.NewClient(&redis.Options{Addr: url})}
+			red := &redis.Options{Addr: url}
+			r := &bindings.RecallRedis{Client: redis.NewClient(red)}
 			sh.Children = append(sh.Children, r)
 			if err := r.Ping().Err(); err != nil {
 				return err
