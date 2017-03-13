@@ -13,6 +13,7 @@ type Request struct {
 	Test        bool         `json:"test"`
 	Impressions []Impression `json:"imp"`
 	Site        struct {
+		Placement   string `json:"placement"`
 		Vertical    string `json:"vertical"`
 		Brand       string `json:"brand"`
 		Network     string `json:"network"`

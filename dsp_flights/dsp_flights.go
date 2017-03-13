@@ -432,6 +432,9 @@ func PrepareResponse(flight *DemandFlight) {
 	url = strings.Replace(url, `{brandurl}`, fmt.Sprintf(`%s`, brandSlug), 1)
 	url = strings.Replace(url, `{vertical}`, fmt.Sprintf(`%s`, vert), 1)
 
+	url = strings.Replace(url, `{cpc}`, fmt.Sprintf(`%f`, bid.Price), 1)
+	url = strings.Replace(url, `{placement}`, flight.Request.RawRequest.Site.Placement, 1)
+
 	bid.URL = url
 
 	if flight.Error != nil {
