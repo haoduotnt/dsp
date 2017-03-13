@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -9,6 +10,8 @@ type ConsulConfigs struct {
 	KV        *api.KV
 	RedisUrls string
 }
+
+const KeyMissing = errors.New("Key Missing")
 
 func (c *ConsulConfigs) Cycle() error {
 	if c.Client == nil {
@@ -23,6 +26,9 @@ func (c *ConsulConfigs) Cycle() error {
 	pair, _, err := c.KV.Get("ms/redis/urls", nil)
 	if err != nil {
 		return ErrAllowed{err}
+	}
+	if pair == nil {
+		return ErrAllowed{KeyMissing}
 	}
 	c.RedisUrls = string(pair.Value)
 	return nil
