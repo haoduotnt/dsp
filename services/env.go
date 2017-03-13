@@ -82,7 +82,6 @@ func (p *ProductionDepsService) Cycle() error {
 		}
 		rc2 := &bindings.RandomCache{sh}
 		p.BindingDeps.Redis = rc2
-
 	}
 
 	if p.BindingDeps.ConfigDB == nil {
