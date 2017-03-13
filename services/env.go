@@ -59,15 +59,15 @@ func (p *ProductionDepsService) Cycle() error {
 		p.BindingDeps.DefaultKey = os.Getenv("TDEFAULTKEY")
 	}
 
+	if p.BindingDeps.Redis != nil {
+		go func(oldredis *bindings.RandomCache) {
+			time.Sleep(4 * time.Second)
+			p.BindingDeps.Logger.Println("redis dump", p.BindingDeps.Redis.String())
+		}(p.BindingDeps.Redis)
+	}
+
 	if str := p.RedisDSN(); str != p.RedisStr {
 		p.RedisStr = str
-
-		if p.BindingDeps.Redis != nil {
-			go func(oldredis *bindings.RandomCache) {
-				time.Sleep(4 * time.Second)
-				p.BindingDeps.Logger.Println("redis dump", p.BindingDeps.Redis.String())
-			}(p.BindingDeps.Redis)
-		}
 		sh := &bindings.ShardSystem{Fallback: p.BindingDeps.Redis}
 		for _, url := range strings.Split(str, ",") {
 			red := &redis.Options{Addr: url}

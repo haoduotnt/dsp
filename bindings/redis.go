@@ -104,7 +104,8 @@ func (r *RecallRedis) Load(keyStr string) (string, error) {
 }
 
 func (r *RecallRedis) String() string {
-	return fmt.Sprintf(`redis client called %d times`, atomic.LoadUint64(&r.calls))
+	v := atomic.SwapUint64(&r.calls, 0)
+	return fmt.Sprintf(`redis client called %d times since last dump`, v)
 }
 
 type CountingCache struct {
