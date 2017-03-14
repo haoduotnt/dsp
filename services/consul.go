@@ -13,23 +13,25 @@ type ConsulConfigs struct {
 
 var KeyMissing = errors.New("Key Missing")
 
-func (c *ConsulConfigs) Cycle() error {
+func (c *ConsulConfigs) Cycle(quit func(error) bool) {
 	if c.Client == nil {
 		client, err := api.NewClient(api.DefaultConfig())
 		if err != nil {
-			return ErrAllowed{err}
+			quit(ErrDatabaseMissing{"consul", err})
+			return
 		}
 		c.Client = client
 		c.KV = client.KV()
 	}
 
 	pair, _, err := c.KV.Get("ms/redis/urls", nil)
-	if err != nil {
-		return ErrAllowed{err}
+	if quit(ErrDatabaseMissing{"consul", err}) {
+		return
 	}
 	if pair == nil {
-		return ErrAllowed{KeyMissing}
+		quit(ErrParsing{"consul redis urls", KeyMissing})
+		return
 	}
 	c.RedisUrls = string(pair.Value)
-	return nil
+	return
 }

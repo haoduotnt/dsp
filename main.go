@@ -5,7 +5,6 @@ import (
 	"github.com/clixxa/dsp/dsp_flights"
 	"github.com/clixxa/dsp/services"
 	"github.com/clixxa/dsp/wish_flights"
-	"log"
 	"net/http"
 	"os"
 )
@@ -16,35 +15,39 @@ type Main struct {
 
 func (m *Main) Launch() {
 	consul := &services.ConsulConfigs{}
-	deps := &services.ProductionDepsService{Consul: consul}
+
+	messages := make(chan string, 100)
+	printer := &services.Printer{Messages: messages}
+
+	deps := &services.ProductionDepsService{Messages: messages, Consul: consul}
 
 	dspRuntime := &dsp_flights.BidEntrypoint{AllTest: m.TestOnly, Logic: dsp_flights.SimpleLogic{}}
-	winRuntime := &wish_flights.WishEntrypoint{}
+	winRuntime := &wish_flights.WishEntrypoint{Messages: messages}
 
-	router := &services.RouterService{}
+	router := &services.RouterService{Messages: messages}
 	router.Mux = http.NewServeMux()
+
+	ef := &services.ErrorFilter{Tolerances: services.ConnectionErrors & services.ParsingErrors, Messages: messages}
 	router.Mux.Handle("/", dspRuntime)
-	router.Mux.Handle("/win", winRuntime)
 
-	cycler := &services.CycleService{}
-	cycler.BindingDeps.Logger = log.New(os.Stdout, "INIT ", log.Lshortfile|log.Ltime)
+	winChan := &services.HttpToChan{Messages: messages, ObjectFactory: winRuntime.NewFlight}
+	router.Mux.Handle("/win", winChan)
 
-	launch := &services.LaunchService{}
+	launch := &services.LaunchService{Messages: messages}
 
-	wireUp := &services.CycleService{Proxy: func() error {
+	wireUp := &services.CycleService{Proxy: func(func(error) bool) {
 		dspRuntime.BindingDeps = deps.BindingDeps
 		winRuntime.BindingDeps = deps.BindingDeps
-		cycler.BindingDeps = deps.BindingDeps
-		router.BindingDeps = deps.BindingDeps
-		launch.BindingDeps = deps.BindingDeps
-		return nil
+		printer.PrintTo = deps.BindingDeps.Logger
 	}}
 
+	cycler := &services.CycleService{ErrorFilter: ef.Quit, Messages: messages}
 	cycler.Children = append(cycler.Children, consul, deps, wireUp, dspRuntime, winRuntime)
-	launch.Children = append(launch.Children, cycler, router)
+	launch.Children = append(launch.Children, cycler, printer, router, winRuntime)
 
 	fmt.Println("starting launcher")
-	launch.Launch()
+	fmt.Println("launch returned", launch.Launch())
+	printer.Flush()
 }
 
 func NewMain() *Main {

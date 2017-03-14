@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/clixxa/dsp/bindings"
 	"github.com/clixxa/dsp/dsp_flights"
+	"github.com/clixxa/dsp/services"
 	"net/url"
 	"strconv"
 	"sync"
@@ -22,33 +23,56 @@ type WishEntrypoint struct {
 	ConfigLock        sync.RWMutex
 }
 
-func (e *WishEntrypoint) NewFlight() (*WinFlight, func()) {
+func (e *WishEntrypoint) NewFlight() (services.DecoderProxy, func() error) {
 	wf := &WinFlight{}
-	return wf, func() { e.Wins <- wf }
+	return wf, func() error {
+		e.Wins <- wf
+		return nil
+	}
 }
 
 func (e *WishEntrypoint) Launch(errs chan error) error {
 	// create template win flight
 	e.Wins = make(chan *WinFlight)
 	e.Errors = errs
+	e.Messages <- "launching wish"
 	go e.Consume()
 	return nil
 }
 
-func (e *WishEntrypoint) Cycle() error {
+func (e *WishEntrypoint) Cycle(quit func(error) bool) {
 	e.ConfigLock.Lock()
 	defer e.ConfigLock.Unlock()
 	e.LockedBindingDeps = &e.BindingDeps
-	return nil
 }
 
 func (e *WishEntrypoint) Consume() {
 	for {
+		e.Messages <- "waiting to consume a batch"
 		buff := make([]*WinFlight, 100)
+		done := false
+
+		var to <-chan time.Time
 		for n := range buff {
-			buff[n] = <-e.Wins
+			if n == 0 {
+				buff[n] = <-e.Wins
+				to = time.After(time.Second * 10)
+				continue
+			}
+			if done {
+				break
+			}
+			select {
+			case buff[n] = <-e.Wins:
+			case <-to:
+				done = true
+				buff = buff[:n]
+				break
+			}
 		}
-		e.ConsumeBatch(buff)
+		if len(buff) > 0 {
+			e.ConsumeBatch(buff)
+		}
 	}
 }
 
@@ -60,6 +84,7 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 	recalls := bindings.Recalls{Env: *e.LockedBindingDeps}
 
 	start := time.Now()
+	good := 0
 	for _, wf := range buff {
 		var err error
 
@@ -98,9 +123,10 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 			e.Messages <- err.Error()
 			continue
 		}
+		good++
 	}
 
-	e.Messages <- fmt.Sprintf(`win batch took %s`, time.Since(start))
+	e.Messages <- fmt.Sprintf(`win batch did %d/%d successfully in %s`, good, len(buff), time.Since(start))
 }
 
 type WinFlight struct {
@@ -128,6 +154,9 @@ func (wf *WinFlight) Columns() [17]interface{} {
 }
 
 func (wf *WinFlight) UnmarshalJSON(d []byte) error {
+	if len(d) == 0 {
+		return nil
+	}
 	return json.Unmarshal(d, (*wfProxy)(wf))
 }
 

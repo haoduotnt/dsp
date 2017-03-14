@@ -1,20 +1,38 @@
 package services
 
 import (
-	"github.com/clixxa/dsp/bindings"
+	"log"
+	"time"
 )
 
 type Printer struct {
-	Deps     bindings.BindingDeps
 	Messages chan string
+	PrintTo  *log.Logger
 }
 
 func (p *Printer) Launch(errs chan error) error {
-	p.Deps.Logger.Println("starting printer")
+	p.Messages <- "launching printer"
 	go func() {
+		timeChanged := true
+		go func() {
+			for range time.NewTicker(time.Second).C {
+				timeChanged = true
+			}
+		}()
 		for str := range p.Messages {
-			p.Deps.Logger.Println(str)
+			if timeChanged {
+				p.PrintTo.Println(time.Now().Format(time.Stamp))
+				timeChanged = false
+			}
+			p.PrintTo.Println(str)
 		}
 	}()
 	return nil
+}
+
+func (p *Printer) Flush() {
+	close(p.Messages)
+	for str := range p.Messages {
+		p.PrintTo.Println(str)
+	}
 }

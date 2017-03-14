@@ -14,6 +14,7 @@ type ProductionDepsService struct {
 	BindingDeps bindings.BindingDeps
 	RedisStr    string
 	Consul      *ConsulConfigs
+	Messages    chan string
 }
 
 func (p *ProductionDepsService) ConfigDSN() *bindings.DSN {
@@ -45,13 +46,13 @@ func (p *ProductionDepsService) RedisDSN() string {
 	return os.Getenv("TRECALLURL")
 }
 
-func (p *ProductionDepsService) Cycle() error {
+func (p *ProductionDepsService) Cycle(quit func(error) bool) {
 	if p.BindingDeps.Debug == nil {
 		p.BindingDeps.Debug = log.New(os.Stderr, "", log.Lshortfile|log.Ltime)
 	}
 
 	if p.BindingDeps.Logger == nil {
-		p.BindingDeps.Logger = log.New(os.Stdout, "", log.Lshortfile|log.Ltime)
+		p.BindingDeps.Logger = log.New(os.Stdout, "", 0)
 		p.BindingDeps.Debug.Println("created new Logger to stdout")
 	}
 
@@ -64,7 +65,7 @@ func (p *ProductionDepsService) Cycle() error {
 			time.Sleep(4 * time.Second)
 			s := p.BindingDeps.Redis.String()
 			if s != "" {
-				p.BindingDeps.Logger.Println("redis dump")
+				p.Messages <- s
 			}
 		}(p.BindingDeps.Redis)
 	}
@@ -72,47 +73,57 @@ func (p *ProductionDepsService) Cycle() error {
 	if str := p.RedisDSN(); str != p.RedisStr {
 		p.RedisStr = str
 		sh := &bindings.ShardSystem{Fallback: p.BindingDeps.Redis}
+		rc2 := &bindings.RandomCache{sh}
 		for _, url := range strings.Split(str, ",") {
 			red := &redis.Options{Addr: url}
 			r := &bindings.RecallRedis{Client: redis.NewClient(red)}
 			sh.Children = append(sh.Children, r)
 			if err := r.Ping().Err(); err != nil {
-				return err
+				if quit(ErrDatabaseMissing{"redis " + url, err}) {
+					return
+				} else {
+					rc2 = nil
+				}
 			}
 		}
-		rc2 := &bindings.RandomCache{sh}
 		p.BindingDeps.Redis = rc2
-
 	}
 
 	if p.BindingDeps.ConfigDB == nil {
-		p.BindingDeps.Debug.Println("connecting to real config")
 		dsn := p.ConfigDSN()
 		db, err := sql.Open(dsn.Driver, dsn.Dump())
 		if err != nil {
-			p.BindingDeps.Debug.Println("err:", err.Error())
-			return err
-		}
-		if err := db.Ping(); err != nil {
-			p.BindingDeps.Debug.Println("err:", err.Error())
-			return err
+			if quit(ErrDatabaseMissing{"config db", err}) {
+				return
+			}
+			db = nil
+		} else {
+			if err := db.Ping(); err != nil {
+				if quit(ErrDatabaseMissing{"config db ping", err}) {
+					return
+				}
+				db = nil
+			}
 		}
 		p.BindingDeps.ConfigDB = db
 	}
 
 	if p.BindingDeps.StatsDB == nil {
-		p.BindingDeps.Debug.Println("connecting to real stats")
 		dsn := p.StatsDSN()
 		db, err := sql.Open(dsn.Driver, dsn.Dump())
 		if err != nil {
-			p.BindingDeps.Debug.Println("err:", err.Error())
-			return err
-		}
-		if err := db.Ping(); err != nil {
-			p.BindingDeps.Debug.Println("err:", err.Error())
-			return err
+			if quit(ErrDatabaseMissing{"stats db", err}) {
+				return
+			}
+			db = nil
+		} else {
+			if err := db.Ping(); err != nil {
+				if quit(ErrDatabaseMissing{"stats db ping", err}) {
+					return
+				}
+				db = nil
+			}
 		}
 		p.BindingDeps.StatsDB = db
 	}
-	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/clixxa/dsp/bindings"
 	"github.com/clixxa/dsp/rtb_types"
+	"github.com/clixxa/dsp/services"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -23,7 +24,7 @@ type BidEntrypoint struct {
 	AllTest     bool
 }
 
-func (e *BidEntrypoint) Cycle() error {
+func (e *BidEntrypoint) Cycle(quit func(error) bool) {
 	// create template demand flight
 	df := &DemandFlight{}
 	if old, found := e.demandFlight.Load().(*DemandFlight); found {
@@ -35,37 +36,41 @@ func (e *BidEntrypoint) Cycle() error {
 		df.Runtime.Debug = e.BindingDeps.Debug
 		df.Runtime.Storage.Recalls = bindings.Recalls{Env: e.BindingDeps}.Save
 		s := strings.Split(e.BindingDeps.DefaultKey, ":")
-		key, iv := s[0], s[1]
-		df.Runtime.DefaultB64 = &bindings.B64{Key: []byte(key), IV: []byte(iv)}
+		if len(s) != 2 {
+			if quit(services.ErrParsing{"encryption key", fmt.Errorf(`missing encryption key...`)}) {
+				return
+			}
+		} else {
+			key, iv := s[0], s[1]
+			df.Runtime.DefaultB64 = &bindings.B64{Key: []byte(key), IV: []byte(iv)}
+		}
 		df.Runtime.Logic = e.Logic
 		df.Runtime.TestOnly = e.AllTest
 
-		if err := (bindings.StatsDB{}).Marshal(e.BindingDeps.StatsDB); err != nil {
-			e.BindingDeps.Debug.Println("err:", err.Error())
-			return err
+		if e.BindingDeps.StatsDB != nil {
+			if quit(services.ErrParsing{"stats initial marshal", (bindings.StatsDB{}).Marshal(e.BindingDeps.StatsDB)}) {
+				return
+			}
 		}
 	}
 
-	if err := df.Runtime.Storage.Folders.Unmarshal(1, e.BindingDeps); err != nil {
-		e.BindingDeps.Debug.Println("err:", err.Error())
-		return err
-	}
-	if err := df.Runtime.Storage.Creatives.Unmarshal(1, e.BindingDeps); err != nil {
-		e.BindingDeps.Debug.Println("err:", err.Error())
-		return err
-	}
+	if e.BindingDeps.ConfigDB != nil {
+		if quit(services.ErrParsing{"config Folders", df.Runtime.Storage.Folders.Unmarshal(1, e.BindingDeps)}) {
+			return
+		}
+		if quit(services.ErrParsing{"config Creatives", df.Runtime.Storage.Creatives.Unmarshal(1, e.BindingDeps)}) {
+			return
+		}
 
-	if err := df.Runtime.Storage.Users.Unmarshal(1, e.BindingDeps); err != nil {
-		e.BindingDeps.Debug.Println("err:", err.Error())
-		return err
-	}
-	if err := df.Runtime.Storage.Pseudonyms.Unmarshal(1, e.BindingDeps); err != nil {
-		e.BindingDeps.Debug.Println("err:", err.Error())
-		return err
+		if quit(services.ErrParsing{"config Users", df.Runtime.Storage.Users.Unmarshal(1, e.BindingDeps)}) {
+			return
+		}
+		if quit(services.ErrParsing{"config Pseudonyms", df.Runtime.Storage.Pseudonyms.Unmarshal(1, e.BindingDeps)}) {
+			return
+		}
 	}
 
 	e.demandFlight.Store(df)
-	return nil
 }
 
 func (e *BidEntrypoint) DemandFlight() *DemandFlight {

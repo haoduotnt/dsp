@@ -1,33 +1,27 @@
 package services
 
 import (
-	"github.com/clixxa/dsp/bindings"
+	"fmt"
 	"time"
 )
 
-type ErrAllowed struct {
-	UnderlyingErr error
-}
-
-func (e ErrAllowed) Error() string {
-	return "ignored: " + e.UnderlyingErr.Error()
-}
-
 type CycleService struct {
-	BindingDeps bindings.BindingDeps
+	Messages    chan string
+	ErrorFilter func(error) bool
 	Children    []interface {
-		Cycle() error
+		Cycle(func(error) bool)
 	}
-	Proxy func() error
+	Proxy func(func(error) bool)
 }
 
 func (c *CycleService) Launch(errs chan error) error {
-	if err := c.cycleAll(); err != nil {
-		return err
+	c.Messages <- "launching cycler"
+	if err := c.cycleAll(c.ErrorFilter); c.ErrorFilter(err) {
+		return ErrLaunching{err}
 	}
 	go func() {
 		for range time.NewTicker(time.Minute).C {
-			if err := c.cycleAll(); err != nil {
+			if err := c.cycleAll(c.ErrorFilter); c.ErrorFilter(err) {
 				errs <- err
 			}
 		}
@@ -35,21 +29,27 @@ func (c *CycleService) Launch(errs chan error) error {
 	return nil
 }
 
-func (c *CycleService) cycleAll() error {
-	for _, ch := range c.Children {
-		if err := ch.Cycle(); err != nil {
-			c.BindingDeps.Logger.Printf("failed to cycle child %#v, err: %s", ch, err.Error())
-			if _, ok := err.(ErrAllowed); !ok {
-				return err
-			}
+func (c *CycleService) cycleAll(quit func(error) bool) error {
+	var retErr error
+	nq := func(e error) bool {
+		if quit(e) {
+			retErr = e
+			return true
 		}
+		return false
 	}
-	return nil
+	for _, ch := range c.Children {
+		if retErr != nil {
+			break
+		}
+		c.Messages <- "cycler launching " + fmt.Sprintf(`%T`, ch)
+		ch.Cycle(nq)
+	}
+	return retErr
 }
 
-func (c *CycleService) Cycle() error {
+func (c *CycleService) Cycle(quit func(error) bool) {
 	if c.Proxy != nil {
-		return c.Proxy()
+		c.Proxy(quit)
 	}
-	return nil
 }

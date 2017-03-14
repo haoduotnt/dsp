@@ -16,12 +16,12 @@ type Querier interface {
 	ParseQuery(url.Values)
 }
 
-type HttpToChannel struct {
+type HttpToChan struct {
 	ObjectFactory func() (DecoderProxy, func() error)
 	Messages      chan string
 }
 
-func (h *HttpToChannel) ServeHTTP(r *http.Request, w http.ResponseWriter) {
+func (h *HttpToChan) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	b := bytes.NewBuffer(nil)
 	if _, err := b.ReadFrom(r.Body); err != nil {
 		w.WriteHeader(500)
