@@ -38,7 +38,7 @@ func TestRetryWithSharding(t *testing.T) {
 	if val, err := rc2.Load(strconv.Itoa(id)); err != nil {
 		t.Error(err)
 	} else if val != str {
-		t.Error("incorrect return val")
+		t.Error("incorrect return val: " + val)
 	}
 }
 

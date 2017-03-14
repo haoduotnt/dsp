@@ -130,7 +130,7 @@ func (s *CountingCache) Store(keyStr string, val string) (err error) {
 
 func (s *CountingCache) Load(keyStr string) (string, error) {
 	s.n++
-	if s.Callback != nil {
+	if s.Callback == nil {
 		return "", nil
 	}
 	return s.Callback(s.n-1, keyStr)

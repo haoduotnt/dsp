@@ -378,8 +378,9 @@ func PrepareResponse(flight *DemandFlight) {
 		revShare = 100
 	}
 	bid := rtb_types.Bid{}
+	fp := float64(flight.FullPrice)
 	flight.Runtime.Logger.Printf("rev calculated at %f", revShare)
-	bid.Price = float64(flight.FullPrice) * revShare / 100
+	bid.Price = fp * revShare / 100
 	flight.Margin = flight.FullPrice - int(bid.Price)
 
 	net, found := flight.Runtime.Storage.Pseudonyms.NetworkIDS[flight.Request.NetworkID]
@@ -432,7 +433,7 @@ func PrepareResponse(flight *DemandFlight) {
 	url = strings.Replace(url, `{brandurl}`, fmt.Sprintf(`%s`, brandSlug), 1)
 	url = strings.Replace(url, `{vertical}`, fmt.Sprintf(`%s`, vert), 1)
 
-	url = strings.Replace(url, `{cpc}`, fmt.Sprintf(`%f`, bid.Price), 1)
+	url = strings.Replace(url, `{cpc}`, fmt.Sprintf(`%f`, fp/100000), 1)
 	url = strings.Replace(url, `{placement}`, flight.Request.RawRequest.Site.Placement, 1)
 
 	bid.URL = url
