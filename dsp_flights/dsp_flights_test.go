@@ -122,13 +122,11 @@ func TestLoadAll(t *testing.T) {
 
 	out, dump := bindings.BufferedLogger(t)
 	be := &BidEntrypoint{BindingDeps: bindings.BindingDeps{ConfigDB: db, StatsDB: db, Logger: out, Debug: out, DefaultKey: ":", Redis: &bindings.RandomCache{&bindings.CountingCache{}}}}
-	if err := be.Cycle(); err != nil {
-		t.Log("failed to cycle, dumping")
-		dump()
-		t.Log("err", err.Error())
-	} else {
-		dump()
-	}
+	be.Cycle(func(err error) bool {
+		t.Log("err cycling", err.Error())
+		return false
+	})
+	dump()
 	if be.DemandFlight().Runtime.Storage.Folders.ByID(5).Network[1] != 2 {
 		t.Error("missing second network in folder whitelist")
 	}
