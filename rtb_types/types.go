@@ -57,3 +57,22 @@ type WinNotice struct {
 	Bid          Bid    `json:"bid"`
 	ImpID        int    `json:"impid"`
 }
+
+type BidSnapshot struct {
+	FolderID   int        `json:"folder"`
+	CreativeID int        `json:"creative"`
+	Margin     int        `json:"margin"`
+	Dims       Dimensions `json:"dims"`
+	Raw        Request    `json:"raw"`
+}
+
+type Dimensions struct {
+	VerticalID    int
+	BrandID       int
+	NetworkID     int
+	SubNetworkID  int
+	NetworkTypeID int
+	DeviceTypeID  int
+	CountryID     int
+	GenderID      int
+}

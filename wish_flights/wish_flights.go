@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/clixxa/dsp/bindings"
-	"github.com/clixxa/dsp/dsp_flights"
+	"github.com/clixxa/dsp/rtb_types"
 	"github.com/clixxa/dsp/services"
 	"net/url"
 	"strconv"
@@ -130,15 +130,12 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 }
 
 type WinFlight struct {
-	FolderID   int                 `json:"folder"`
-	CreativeID int                 `json:"creative"`
-	Request    dsp_flights.Request `json:"req"`
-	Margin     int                 `json:"margin"`
+	rtb_types.BidSnapshot
 
-	RevTXHome int    `json:"-"`
-	PaidPrice int    `json:"-"`
-	RecallID  string `json:"-"`
-	SaleID    int    `json:"-"`
+	RevTXHome int
+	PaidPrice int
+	RecallID  string
+	SaleID    int
 
 	PriceRaw, ImpRaw string
 }
@@ -150,14 +147,14 @@ func (wf *WinFlight) String() string {
 }
 
 func (wf *WinFlight) Columns() [17]interface{} {
-	return [17]interface{}{wf.SaleID, !wf.Request.RawRequest.Test, wf.RevTXHome, wf.RevTXHome, wf.PaidPrice, wf.PaidPrice, 0, wf.FolderID, wf.CreativeID, wf.Request.CountryID, wf.Request.VerticalID, wf.Request.BrandID, wf.Request.NetworkID, wf.Request.SubNetworkID, wf.Request.NetworkTypeID, wf.Request.GenderID, wf.Request.DeviceTypeID}
+	return [17]interface{}{wf.SaleID, !wf.BidSnapshot.Raw.Test, wf.RevTXHome, wf.RevTXHome, wf.PaidPrice, wf.PaidPrice, 0, wf.FolderID, wf.CreativeID, wf.BidSnapshot.Dims.CountryID, wf.BidSnapshot.Dims.VerticalID, wf.BidSnapshot.Dims.BrandID, wf.BidSnapshot.Dims.NetworkID, wf.BidSnapshot.Dims.SubNetworkID, wf.BidSnapshot.Dims.NetworkTypeID, wf.BidSnapshot.Dims.GenderID, wf.BidSnapshot.Dims.DeviceTypeID}
 }
 
 func (wf *WinFlight) UnmarshalJSON(d []byte) error {
 	if len(d) == 0 {
 		return nil
 	}
-	return json.Unmarshal(d, (*wfProxy)(wf))
+	return json.Unmarshal(d, &wf.BidSnapshot)
 }
 
 func (wf *WinFlight) ParseQuery(u url.Values) {

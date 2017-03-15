@@ -97,7 +97,7 @@ type SimpleLogic struct {
 }
 
 func (s SimpleLogic) SelectFolderAndCreative(flight *DemandFlight, folders []ElegibleFolder, totalCpc int) {
-	eg := folders[flight.Request.RawRequest.Random255%len(folders)]
+	eg := folders[flight.Raw.Random255%len(folders)]
 	foldIds := make([]string, len(folders))
 	for n, folder := range folders {
 		foldIds[n] = strconv.Itoa(folder.FolderID)
@@ -106,7 +106,7 @@ func (s SimpleLogic) SelectFolderAndCreative(flight *DemandFlight, folders []Ele
 	flight.FolderID = eg.FolderID
 	flight.FullPrice = eg.BidAmount
 	folder := flight.Runtime.Storage.Folders.ByID(eg.FolderID)
-	flight.CreativeID = folder.Creative[flight.Request.RawRequest.Random255%len(folder.Creative)]
+	flight.CreativeID = folder.Creative[flight.Raw.Random255%len(folder.Creative)]
 }
 
 func (s SimpleLogic) CalculateRevshare(flight *DemandFlight) float64 { return 98.0 }
@@ -128,16 +128,14 @@ type DemandFlight struct {
 		Debug    *log.Logger
 		TestOnly bool
 		Logic    BiddingLogic
-	} `json:"-"`
+	}
 
-	HttpRequest  *http.Request       `json:"-"`
-	HttpResponse http.ResponseWriter `json:"-"`
+	HttpRequest  *http.Request
+	HttpResponse http.ResponseWriter
 
-	FolderID   int     `json:"folder"`
-	CreativeID int     `json:"creative"`
-	Request    Request `json:"req"`
-	Margin     int     `json:"margin"`
-	StartTime  time.Time
+	rtb_types.BidSnapshot
+
+	StartTime time.Time
 
 	RecallID  int    `json:"-"`
 	FullPrice int    `json:"-"`
@@ -147,10 +145,8 @@ type DemandFlight struct {
 	Error    error              `json:"-"`
 }
 
-type dfProxy DemandFlight
-
 func (df *DemandFlight) MarshalJSON() ([]byte, error) {
-	return json.Marshal((*dfProxy)(df))
+	return json.Marshal(&df.BidSnapshot)
 }
 
 func (df *DemandFlight) String() string {
@@ -179,62 +175,62 @@ func ReadBidRequest(flight *DemandFlight) {
 	flight.Runtime.Logger.Println(`starting ReadBidRequest!`)
 	flight.StartTime = time.Now()
 
-	if e := json.NewDecoder(flight.HttpRequest.Body).Decode(&flight.Request.RawRequest); e != nil {
+	if e := json.NewDecoder(flight.HttpRequest.Body).Decode(&flight.Raw); e != nil {
 		flight.Error = e
 		flight.Runtime.Logger.Println(`failed to decode body`, e.Error())
 	}
 
 	flight.WinUrl = `http://` + flight.HttpRequest.Host + `/win?price=${AUCTION_PRICE}&key=${AUCTION_BID_ID}&imp=${AUCTION_IMP_ID}`
 
-	if dim, found := flight.Runtime.Storage.Pseudonyms.Subnetworks[flight.Request.RawRequest.Site.SubNetwork]; !found {
-		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.SubNetwork)
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Subnetworks[flight.Raw.Site.SubNetwork]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Raw.Site.SubNetwork)
 	} else {
-		flight.Request.SubNetworkID = dim
+		flight.Dims.SubNetworkID = dim
 	}
 
-	if dim, found := flight.Runtime.Storage.Pseudonyms.Countries[flight.Request.RawRequest.Device.Geo.Country]; !found {
-		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Device.Geo.Country)
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Countries[flight.Raw.Device.Geo.Country]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Raw.Device.Geo.Country)
 	} else {
-		flight.Request.CountryID = dim
+		flight.Dims.CountryID = dim
 	}
 
-	if dim, found := flight.Runtime.Storage.Pseudonyms.Networks[flight.Request.RawRequest.Site.Network]; !found {
-		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.Network)
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Networks[flight.Raw.Site.Network]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Raw.Site.Network)
 	} else {
-		flight.Request.NetworkID = dim
+		flight.Dims.NetworkID = dim
 	}
 
-	if dim, found := flight.Runtime.Storage.Pseudonyms.DeviceTypes[flight.Request.RawRequest.Device.DeviceType]; !found {
-		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Device.DeviceType)
+	if dim, found := flight.Runtime.Storage.Pseudonyms.DeviceTypes[flight.Raw.Device.DeviceType]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Raw.Device.DeviceType)
 	} else {
-		flight.Request.DeviceTypeID = dim
+		flight.Dims.DeviceTypeID = dim
 	}
 
-	if dim, found := flight.Runtime.Storage.Pseudonyms.BrandSlugs[flight.Request.RawRequest.Site.Brand]; !found {
-		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.Brand)
+	if dim, found := flight.Runtime.Storage.Pseudonyms.BrandSlugs[flight.Raw.Site.Brand]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Raw.Site.Brand)
 	} else {
-		flight.Request.BrandID = dim
+		flight.Dims.BrandID = dim
 	}
 
-	if dim, found := flight.Runtime.Storage.Pseudonyms.Verticals[flight.Request.RawRequest.Site.Vertical]; !found {
-		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.Vertical)
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Verticals[flight.Raw.Site.Vertical]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Raw.Site.Vertical)
 	} else {
-		flight.Request.VerticalID = dim
+		flight.Dims.VerticalID = dim
 	}
 
-	if dim, found := flight.Runtime.Storage.Pseudonyms.NetworkTypes[flight.Request.RawRequest.Site.NetworkType]; !found {
-		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.Site.NetworkType)
+	if dim, found := flight.Runtime.Storage.Pseudonyms.NetworkTypes[flight.Raw.Site.NetworkType]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Raw.Site.NetworkType)
 	} else {
-		flight.Request.NetworkTypeID = dim
+		flight.Dims.NetworkTypeID = dim
 	}
 
-	if dim, found := flight.Runtime.Storage.Pseudonyms.Genders[flight.Request.RawRequest.User.Gender]; !found {
-		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Request.RawRequest.User.Gender)
+	if dim, found := flight.Runtime.Storage.Pseudonyms.Genders[flight.Raw.User.Gender]; !found {
+		flight.Runtime.Logger.Printf(`dim not found %s`, flight.Raw.User.Gender)
 	} else {
-		flight.Request.GenderID = dim
+		flight.Dims.GenderID = dim
 	}
 
-	flight.Runtime.Logger.Println("dimensions decoded:", flight.Request)
+	flight.Runtime.Logger.Println("dimensions decoded:", flight.Dims)
 }
 
 // Fill out the elegible bid
@@ -248,13 +244,13 @@ func FindClient(flight *DemandFlight) {
 		if !folder.Active {
 			return "Inactive"
 		}
-		if flight.Request.RawRequest.Test {
+		if flight.Raw.Test {
 			goto CheckBrand
 		}
 
 		if len(folder.Country) > 0 {
 			for _, c := range folder.Country {
-				if flight.Request.CountryID == c {
+				if flight.Dims.CountryID == c {
 					goto CheckBrand
 				}
 			}
@@ -263,7 +259,7 @@ func FindClient(flight *DemandFlight) {
 	CheckBrand:
 		if len(folder.Brand) > 0 {
 			for _, v := range folder.Brand {
-				if flight.Request.BrandID == v {
+				if flight.Dims.BrandID == v {
 					goto CheckNetwork
 				}
 			}
@@ -272,7 +268,7 @@ func FindClient(flight *DemandFlight) {
 	CheckNetwork:
 		if len(folder.Network) > 0 {
 			for _, v := range folder.Network {
-				if flight.Request.NetworkID == v {
+				if flight.Dims.NetworkID == v {
 					goto CheckNetworkType
 				}
 			}
@@ -281,7 +277,7 @@ func FindClient(flight *DemandFlight) {
 	CheckNetworkType:
 		if len(folder.NetworkType) > 0 {
 			for _, v := range folder.NetworkType {
-				if flight.Request.NetworkTypeID == v {
+				if flight.Dims.NetworkTypeID == v {
 					goto CheckSubNetwork
 				}
 			}
@@ -290,7 +286,7 @@ func FindClient(flight *DemandFlight) {
 	CheckSubNetwork:
 		if len(folder.SubNetwork) > 0 {
 			for _, v := range folder.SubNetwork {
-				if flight.Request.SubNetworkID == v {
+				if flight.Dims.SubNetworkID == v {
 					goto CheckGender
 				}
 			}
@@ -299,7 +295,7 @@ func FindClient(flight *DemandFlight) {
 	CheckGender:
 		if len(folder.Gender) > 0 {
 			for _, v := range folder.Gender {
-				if flight.Request.GenderID == v {
+				if flight.Dims.GenderID == v {
 					goto CheckDeviceType
 				}
 			}
@@ -308,7 +304,7 @@ func FindClient(flight *DemandFlight) {
 	CheckDeviceType:
 		if len(folder.DeviceType) > 0 {
 			for _, v := range folder.DeviceType {
-				if flight.Request.DeviceTypeID == v {
+				if flight.Dims.DeviceTypeID == v {
 					goto CheckVertical
 				}
 			}
@@ -317,14 +313,14 @@ func FindClient(flight *DemandFlight) {
 	CheckVertical:
 		if len(folder.Vertical) > 0 {
 			for _, v := range folder.Vertical {
-				if flight.Request.VerticalID == v {
+				if flight.Dims.VerticalID == v {
 					goto CheckBidfloor
 				}
 			}
 			return "Vertical"
 		}
 	CheckBidfloor:
-		if folder.CPC > 0 && folder.CPC < flight.Request.RawRequest.Impressions[0].BidFloor {
+		if folder.CPC > 0 && folder.CPC < flight.Raw.Impressions[0].BidFloor {
 			return "CPC"
 		}
 		return ""
@@ -388,29 +384,29 @@ func PrepareResponse(flight *DemandFlight) {
 	bid.Price = fp * revShare / 100
 	flight.Margin = flight.FullPrice - int(bid.Price)
 
-	net, found := flight.Runtime.Storage.Pseudonyms.NetworkIDS[flight.Request.NetworkID]
+	net, found := flight.Runtime.Storage.Pseudonyms.NetworkIDS[flight.Dims.NetworkID]
 	if !found {
-		flight.Runtime.Logger.Printf(`net not found %d`, flight.Request.NetworkID)
+		flight.Runtime.Logger.Printf(`net not found %d`, flight.Dims.NetworkID)
 		net = ""
 	}
-	snet, found := flight.Runtime.Storage.Pseudonyms.SubnetworkIDS[flight.Request.SubNetworkID]
+	snet, found := flight.Runtime.Storage.Pseudonyms.SubnetworkIDS[flight.Dims.SubNetworkID]
 	if !found {
-		flight.Runtime.Logger.Printf(`snet not found %d`, flight.Request.SubNetworkID)
+		flight.Runtime.Logger.Printf(`snet not found %d`, flight.Dims.SubNetworkID)
 		snet = ""
 	}
-	brand, found := flight.Runtime.Storage.Pseudonyms.BrandIDS[flight.Request.BrandID]
+	brand, found := flight.Runtime.Storage.Pseudonyms.BrandIDS[flight.Dims.BrandID]
 	if !found {
-		flight.Runtime.Logger.Printf(`brand not found %d`, flight.Request.BrandID)
+		flight.Runtime.Logger.Printf(`brand not found %d`, flight.Dims.BrandID)
 		brand = ""
 	}
-	brandSlug, found := flight.Runtime.Storage.Pseudonyms.BrandSlugIDS[flight.Request.BrandID]
+	brandSlug, found := flight.Runtime.Storage.Pseudonyms.BrandSlugIDS[flight.Dims.BrandID]
 	if !found {
-		flight.Runtime.Logger.Printf(`brandSlug not found %d`, flight.Request.BrandID)
+		flight.Runtime.Logger.Printf(`brandSlug not found %d`, flight.Dims.BrandID)
 		brandSlug = ""
 	}
-	vert, found := flight.Runtime.Storage.Pseudonyms.VerticalIDS[flight.Request.VerticalID]
+	vert, found := flight.Runtime.Storage.Pseudonyms.VerticalIDS[flight.Dims.VerticalID]
 	if !found {
-		flight.Runtime.Logger.Printf(`vert not found %d`, flight.Request.VerticalID)
+		flight.Runtime.Logger.Printf(`vert not found %d`, flight.Dims.VerticalID)
 		vert = ""
 	}
 
@@ -439,7 +435,7 @@ func PrepareResponse(flight *DemandFlight) {
 	url = strings.Replace(url, `{vertical}`, fmt.Sprintf(`%s`, vert), 1)
 
 	url = strings.Replace(url, `{cpc}`, fmt.Sprintf(`%f`, fp/100000), 1)
-	url = strings.Replace(url, `{placement}`, flight.Request.RawRequest.Site.Placement, 1)
+	url = strings.Replace(url, `{placement}`, flight.Raw.Site.Placement, 1)
 
 	bid.URL = url
 
@@ -454,7 +450,7 @@ func PrepareResponse(flight *DemandFlight) {
 
 func WriteBidResponse(flight *DemandFlight) {
 	var res []byte
-	if flight.Runtime.TestOnly && len(flight.Response.SeatBids) > 0 && !flight.Request.RawRequest.Test {
+	if flight.Runtime.TestOnly && len(flight.Response.SeatBids) > 0 && !flight.Raw.Test {
 		flight.Runtime.Logger.Println(`test traffic only and traffic is non-test, removing bid`, flight.Response.SeatBids)
 		flight.Response.SeatBids = nil
 	}
@@ -483,19 +479,6 @@ func WriteBidResponse(flight *DemandFlight) {
 		flight.HttpResponse.WriteHeader(http.StatusNoContent)
 	}
 	flight.Runtime.Logger.Println(`dsp /bid took`, time.Since(flight.StartTime))
-}
-
-type Request struct {
-	RawRequest rtb_types.Request
-
-	VerticalID    int
-	BrandID       int
-	NetworkID     int
-	SubNetworkID  int
-	NetworkTypeID int
-	DeviceTypeID  int
-	CountryID     int
-	GenderID      int
 }
 
 type ElegibleFolder struct {
