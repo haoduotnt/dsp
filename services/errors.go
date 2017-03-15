@@ -1,11 +1,16 @@
 package services
 
+import (
+	"fmt"
+)
+
 type ErrorFilter struct {
 	Tolerances int
 	Messages   chan string
 }
 
 func (e *ErrorFilter) Quit(err error) (n bool) {
+	e.Messages <- fmt.Sprintf("tolerance: %d", e.Tolerances)
 	if err == nil {
 		return false
 	}
@@ -14,16 +19,16 @@ func (e *ErrorFilter) Quit(err error) (n bool) {
 			return false
 		}
 		e.Messages <- edm.Error()
-		return e.Tolerances&ConnectionErrors != 0
+		return e.Tolerances&ConnectionErrors == 0
 	}
 	if ep, ok := err.(ErrParsing); ok {
 		if ep.UnderlyingErr == nil {
 			return false
 		}
 		e.Messages <- ep.Error()
-		return e.Tolerances&ParsingErrors != 0
+		return e.Tolerances&ParsingErrors == 0
 	}
-	return e.Tolerances&UnknownErrors != 0
+	return e.Tolerances&UnknownErrors == 0
 }
 
 func prettyErr(e error) string {

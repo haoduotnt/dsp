@@ -27,7 +27,7 @@ func (m *Main) Launch() {
 	router := &services.RouterService{Messages: messages}
 	router.Mux = http.NewServeMux()
 
-	ef := &services.ErrorFilter{Tolerances: services.ConnectionErrors & services.ParsingErrors, Messages: messages}
+	ef := &services.ErrorFilter{Tolerances: services.ConnectionErrors | services.ParsingErrors, Messages: messages}
 	router.Mux.Handle("/", dspRuntime)
 
 	winChan := &services.HttpToChan{Messages: messages, ObjectFactory: winRuntime.NewFlight}
