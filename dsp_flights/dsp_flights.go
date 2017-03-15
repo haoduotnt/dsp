@@ -133,16 +133,15 @@ type DemandFlight struct {
 	HttpRequest  *http.Request
 	HttpResponse http.ResponseWriter
 
-	rtb_types.BidSnapshot
-
 	StartTime time.Time
+	RecallID  int
+	FullPrice int
+	WinUrl    string
 
-	RecallID  int    `json:"-"`
-	FullPrice int    `json:"-"`
-	WinUrl    string `json:"-"`
+	Response rtb_types.Response
+	Error    error
 
-	Response rtb_types.Response `json:"-"`
-	Error    error              `json:"-"`
+	rtb_types.BidSnapshot
 }
 
 func (df *DemandFlight) MarshalJSON() ([]byte, error) {

@@ -130,14 +130,9 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 }
 
 type WinFlight struct {
+	RevTXHome, PaidPrice, SaleID int
+	RecallID, PriceRaw, ImpRaw   string
 	rtb_types.BidSnapshot
-
-	RevTXHome int
-	PaidPrice int
-	RecallID  string
-	SaleID    int
-
-	PriceRaw, ImpRaw string
 }
 
 type wfProxy WinFlight
