@@ -1,16 +1,11 @@
 package services
 
-import (
-	"fmt"
-)
-
 type ErrorFilter struct {
 	Tolerances int
 	Messages   chan string
 }
 
 func (e *ErrorFilter) Quit(err error) (n bool) {
-	e.Messages <- fmt.Sprintf("tolerance: %d", e.Tolerances)
 	if err == nil {
 		return false
 	}
