@@ -89,14 +89,14 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 		var err error
 
 		// parse the incoming params
-		if price, err := strconv.ParseInt(wf.PriceRaw, 10, 64); e != nil {
+		if price, err := strconv.ParseInt(wf.PriceRaw, 10, 64); err != nil {
 			e.Messages <- err.Error()
 			continue
 		} else {
 			wf.PaidPrice = int(price)
 		}
 
-		if impid, err := strconv.ParseInt(wf.ImpRaw, 10, 64); e != nil {
+		if impid, err := strconv.ParseInt(wf.ImpRaw, 10, 64); err != nil {
 			e.Messages <- err.Error()
 			continue
 		} else {
