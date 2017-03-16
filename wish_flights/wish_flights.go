@@ -78,7 +78,7 @@ func (e *WishEntrypoint) Consume() {
 
 func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 	e.ConfigLock.RLock()
-	defer e.ConfigLock.RLocker()
+	defer e.ConfigLock.RUnlock()
 
 	purchases := bindings.Purchases{Env: *e.LockedBindingDeps}
 	recalls := bindings.Recalls{Env: *e.LockedBindingDeps}
