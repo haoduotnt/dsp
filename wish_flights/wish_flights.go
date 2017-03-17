@@ -93,7 +93,6 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 
 		// parse the incoming params
 		if price, err := strconv.ParseInt(wf.PriceRaw, 10, 64); quit(&services.ErrParsing{"price", err}) {
-			e.Messages <- err.Error()
 			continue
 		} else {
 			wf.PaidPrice = int(price)
