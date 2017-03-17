@@ -92,13 +92,13 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 	for _, wf := range buff {
 
 		// parse the incoming params
-		if price, err := strconv.ParseInt(wf.PriceRaw, 10, 64); quit(&services.ErrParsing{"price", err}) {
+		if price, err := strconv.ParseInt(wf.PriceRaw, 10, 64); quit(services.ErrParsing{"price", err}) {
 			continue
 		} else {
 			wf.PaidPrice = int(price)
 		}
 
-		if impid, err := strconv.ParseInt(wf.ImpRaw, 10, 64); quit(&services.ErrParsing{"imp", err}) {
+		if impid, err := strconv.ParseInt(wf.ImpRaw, 10, 64); quit(services.ErrParsing{"imp", err}) {
 			continue
 		} else {
 			wf.SaleID = int(impid)
@@ -106,7 +106,7 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 
 		// get the recalls
 		e.Messages <- fmt.Sprintf(`getting bid info for %d`, wf.RecallID)
-		if quit(&services.ErrDatabaseMissing{"recallid", recalls.Fetch(wf, wf.RecallID)}) {
+		if quit(services.ErrDatabaseMissing{"recallid", recalls.Fetch(wf, wf.RecallID)}) {
 			continue
 		}
 
