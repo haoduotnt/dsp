@@ -19,7 +19,7 @@ import (
 type BidEntrypoint struct {
 	demandFlight atomic.Value
 
-	BindingDeps bindings.BindingDeps
+	BindingDeps services.BindingDeps
 	Logic       BiddingLogic
 	AllTest     bool
 }
@@ -122,7 +122,7 @@ type DemandFlight struct {
 			Pseudonyms bindings.Pseudonyms
 			Users      bindings.Users
 
-			Recalls func(json.Marshaler, *error, *int)
+			Recalls func(json.Marshaler, *int) error
 		}
 		Logger   *log.Logger
 		Debug    *log.Logger
@@ -413,7 +413,9 @@ func PrepareResponse(flight *DemandFlight) {
 
 	flight.Runtime.Logger.Println(`saving reference to KVS`)
 
-	flight.Runtime.Storage.Recalls(flight, &flight.Error, &flight.RecallID)
+	if err := flight.Runtime.Storage.Recalls(flight, &flight.RecallID); err != nil {
+		flight.Error = err
+	}
 	bid.ID = strconv.Itoa(flight.RecallID)
 
 	bid.WinUrl = flight.WinUrl

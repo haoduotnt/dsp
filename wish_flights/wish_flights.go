@@ -14,13 +14,14 @@ import (
 
 // Uses environment variables and real database connections to create Runtimes
 type WishEntrypoint struct {
-	BindingDeps       bindings.BindingDeps
-	LockedBindingDeps *bindings.BindingDeps
+	BindingDeps       services.BindingDeps
+	LockedBindingDeps *services.BindingDeps
 	AllTest           bool
 	Wins              chan *WinFlight
 	Errors            chan error
 	Messages          chan string
 	ConfigLock        sync.RWMutex
+	Quit              func(error) bool
 }
 
 func (e *WishEntrypoint) NewFlight() (services.DecoderProxy, func() error) {
@@ -43,6 +44,7 @@ func (e *WishEntrypoint) Launch(errs chan error) error {
 func (e *WishEntrypoint) Cycle(quit func(error) bool) {
 	e.ConfigLock.Lock()
 	defer e.ConfigLock.Unlock()
+	e.Quit = quit
 	e.LockedBindingDeps = &e.BindingDeps
 }
 
@@ -80,24 +82,24 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 	e.ConfigLock.RLock()
 	defer e.ConfigLock.RUnlock()
 
+	quit := e.Quit
+
 	purchases := bindings.Purchases{Env: *e.LockedBindingDeps}
 	recalls := bindings.Recalls{Env: *e.LockedBindingDeps}
 
 	start := time.Now()
-	good := 0
+	rows := [][17]interface{}{}
 	for _, wf := range buff {
-		var err error
 
 		// parse the incoming params
-		if price, err := strconv.ParseInt(wf.PriceRaw, 10, 64); err != nil {
+		if price, err := strconv.ParseInt(wf.PriceRaw, 10, 64); quit(&services.ErrParsing{"price", err}) {
 			e.Messages <- err.Error()
 			continue
 		} else {
 			wf.PaidPrice = int(price)
 		}
 
-		if impid, err := strconv.ParseInt(wf.ImpRaw, 10, 64); err != nil {
-			e.Messages <- err.Error()
+		if impid, err := strconv.ParseInt(wf.ImpRaw, 10, 64); quit(&services.ErrParsing{"imp", err}) {
 			continue
 		} else {
 			wf.SaleID = int(impid)
@@ -105,10 +107,8 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 
 		// get the recalls
 		e.Messages <- fmt.Sprintf(`getting bid info for %d`, wf.RecallID)
-		recalls.Fetch(wf, &err, wf.RecallID)
-		if err != nil {
-			e.Messages <- err.Error()
-			continue
+		if quit(&services.ErrDatabaseMissing{"recallid", recalls.Fetch(wf, wf.RecallID)}) {
+			return
 		}
 
 		// apply business logic
@@ -117,16 +117,12 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 		e.Messages <- fmt.Sprintf(`win: revssp%d revtx%d`, wf.PaidPrice, wf.RevTXHome)
 
 		// store into purchases table
-		e.Messages <- `inserting purchase record`
-		purchases.Save(wf.Columns(), &err)
-		if err != nil {
-			e.Messages <- err.Error()
-			continue
-		}
-		good++
+		rows = append(rows, wf.Columns())
 	}
 
-	e.Messages <- fmt.Sprintf(`win batch did %d/%d successfully in %s`, good, len(buff), time.Since(start))
+	e.Messages <- `inserting purchase records`
+	purchases.Save(rows, quit)
+	e.Messages <- fmt.Sprintf(`win batch did %d successfully in %s`, len(buff), time.Since(start))
 }
 
 type WinFlight struct {

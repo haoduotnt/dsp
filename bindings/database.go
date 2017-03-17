@@ -4,21 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/clixxa/dsp/services"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"log"
 	"strconv"
 	"strings"
 )
-
-type BindingDeps struct {
-	StatsDB    *sql.DB
-	ConfigDB   *sql.DB
-	Debug      *log.Logger
-	Logger     *log.Logger
-	DefaultKey string
-	Redis      *RandomCache
-}
 
 func tojson(i interface{}) string {
 	s, _ := json.Marshal(i)
@@ -27,32 +19,6 @@ func tojson(i interface{}) string {
 
 func wide(depth int) string {
 	return strings.Repeat("\t", depth)
-}
-
-type DSN struct {
-	Driver   string
-	Host     string
-	Port     string
-	Database string
-	Username string
-	Password string
-}
-
-func (d *DSN) Dump() string {
-	tmpl := `unfilled %s, %s, %s, %s, %s`
-	if d.Driver == "mysql" {
-		tmpl = `%s:%s@tcp(%s:%s)/%s?autocommit=true`
-	} else {
-		tmpl = `postgres://%s:%s@%s:%s/%s?sslmode=disable`
-	}
-	return fmt.Sprintf(tmpl, d.Username, d.Password, d.Host, d.Port, d.Database)
-}
-
-func (d *DSN) String() string {
-	if len(d.Password) > 3 {
-		return fmt.Sprintf(`host %s:%s, user %s, pw %s, db %s`, d.Host, d.Port, d.Username, d.Password[:2], d.Database)
-	}
-	return fmt.Sprintf(`host %s:%s, user %s, pw is too short to display, db %s`, d.Host, d.Port, d.Username, d.Database)
 }
 
 const sqlUserIPs = `SELECT ip FROM ip_histories WHERE user_id = ?`
@@ -101,7 +67,7 @@ type Pseudonyms struct {
 	GenderIDs     map[int]string
 }
 
-func (c *Pseudonyms) Unmarshal(depth int, env BindingDeps) error {
+func (c *Pseudonyms) Unmarshal(depth int, env services.BindingDeps) error {
 	c.Namespace(env, sqlCountries, &c.Countries, &c.CountryIDS)
 	c.Namespace(env, sqlNetworks, &c.Networks, &c.NetworkIDS)
 	c.Namespace(env, sqlSubNetworks, &c.Subnetworks, &c.SubnetworkIDS)
@@ -123,7 +89,7 @@ func (c *Pseudonyms) Unmarshal(depth int, env BindingDeps) error {
 	return nil
 }
 
-func (c *Pseudonyms) Map(env BindingDeps, sql string, dest *map[int]int) error {
+func (c *Pseudonyms) Map(env services.BindingDeps, sql string, dest *map[int]int) error {
 	rows, err := env.ConfigDB.Query(sql)
 	if err != nil {
 		env.Debug.Println("err", err)
@@ -142,7 +108,7 @@ func (c *Pseudonyms) Map(env BindingDeps, sql string, dest *map[int]int) error {
 	return nil
 }
 
-func (c *Pseudonyms) Namespace(env BindingDeps, sql string, dest *map[string]int, dest2 *map[int]string) error {
+func (c *Pseudonyms) Namespace(env services.BindingDeps, sql string, dest *map[string]int, dest2 *map[int]string) error {
 	rows, err := env.ConfigDB.Query(sql)
 	if err != nil {
 		env.Debug.Println("err", err)
@@ -186,7 +152,7 @@ func (c *Users) Add(ch *User) int {
 	return ch.ID
 }
 
-func (f *Users) Unmarshal(depth int, env BindingDeps) error {
+func (f *Users) Unmarshal(depth int, env services.BindingDeps) error {
 	var rows *sql.Rows
 	var err error
 	rows, err = env.ConfigDB.Query(`SELECT id FROM users`)
@@ -221,7 +187,7 @@ type User struct {
 	B64 *B64
 }
 
-func (u *User) Unmarshal(depth int, env BindingDeps) error {
+func (u *User) Unmarshal(depth int, env services.BindingDeps) error {
 	rows, err := env.ConfigDB.Query(sqlUserIPs, u.ID)
 	if err != nil {
 		env.Debug.Println("err", err)
@@ -269,7 +235,7 @@ func (u *User) Unmarshal(depth int, env BindingDeps) error {
 	return nil
 }
 
-func AllIDs(table string, env BindingDeps) ([]int, error) {
+func AllIDs(table string, env services.BindingDeps) ([]int, error) {
 	rows, err := env.ConfigDB.Query(`SELECT id FROM ` + table)
 	if err != nil {
 		env.Debug.Println("err", err)
@@ -293,7 +259,7 @@ type Dimensions struct {
 	mode       int
 }
 
-func (d *Dimensions) Unmarshal(depth int, env BindingDeps) error {
+func (d *Dimensions) Unmarshal(depth int, env services.BindingDeps) error {
 	sql := sqlDimension
 	if d.mode == 1 {
 		sql = sqlDimention
@@ -381,7 +347,7 @@ type Folder struct {
 	mode int
 }
 
-func (f *Folder) Unmarshal(depth int, env BindingDeps) error {
+func (f *Folder) Unmarshal(depth int, env services.BindingDeps) error {
 	// var child_id, creative_id int
 	var creative_id sql.NullInt64
 	row := env.ConfigDB.QueryRow(sqlFolder, f.ID)
@@ -497,7 +463,7 @@ func (c *Folders) Add(ch *Folder) int {
 	return ch.ID
 }
 
-func (f *Folders) Unmarshal(depth int, env BindingDeps) error {
+func (f *Folders) Unmarshal(depth int, env services.BindingDeps) error {
 	if ids, err := AllIDs("folders", env); err != nil {
 		return err
 	} else {
@@ -550,7 +516,7 @@ func (c *Creatives) Add(ch *Creative) int {
 	return ch.ID
 }
 
-func (f *Creatives) Unmarshal(depth int, env BindingDeps) error {
+func (f *Creatives) Unmarshal(depth int, env services.BindingDeps) error {
 	if ids, err := AllIDs("creatives", env); err != nil {
 		return err
 	} else {
@@ -574,7 +540,7 @@ type Creative struct {
 	RedirectUrl string
 }
 
-func (c *Creative) Unmarshal(depth int, env BindingDeps) error {
+func (c *Creative) Unmarshal(depth int, env services.BindingDeps) error {
 	row := env.ConfigDB.QueryRow(sqlCreative, c.ID)
 	if err := row.Scan(&c.RedirectUrl); err != nil {
 		env.Debug.Println("err", err)
@@ -607,50 +573,57 @@ func (s StatsDB) Marshal(db *sql.DB) error {
 }
 
 type Recalls struct {
-	Env BindingDeps
+	Env services.BindingDeps
 }
 
-func (s Recalls) Save(f json.Marshaler, errLoc *error, idLoc *int) {
+func (s Recalls) Save(f json.Marshaler, idLoc *int) error {
 	js, _ := f.MarshalJSON()
-	*idLoc, *errLoc = s.Env.Redis.FindID(string(js))
+	var err error
+	*idLoc, err = s.Env.Redis.FindID(string(js))
+	return err
 }
 
-func (s Recalls) Fetch(f json.Unmarshaler, errLoc *error, recall string) {
+func (s Recalls) Fetch(f json.Unmarshaler, recall string) error {
 	target, err := s.Env.Redis.Load(recall)
 	if err != nil {
-		*errLoc = err
-		return
+		return err
 	}
 
 	if e := f.UnmarshalJSON([]byte(target)); e != nil {
-		*errLoc = e
-		s.Env.Logger.Println(`err saving recall`, e.Error())
-		return
+		return e
 	}
+
+	return nil
 }
 
 type Purchases struct {
-	Env      BindingDeps
+	Env      services.BindingDeps
 	SkipWork bool
 }
 
-func (s Purchases) Save(f [17]interface{}, errLoc *error) {
-	args := f[:]
-	s.Env.Debug.Printf(`would query %s with..`, sqlInsertPurchases)
-	s.Env.Logger.Println("saving purchases", args)
-	if s.SkipWork {
-		return
+func (s Purchases) Save(fs [][17]interface{}, quit func(error) bool) {
+	q := []string{}
+	args := []interface{}{}
+
+	n := 1
+	for _, f := range fs {
+		thisInsertString := []string{}
+		for range f {
+			thisInsertString = append(thisInsertString, fmt.Sprintf(`$%d`, n))
+			n++
+		}
+		q = append(q, "("+strings.Join(thisInsertString, ",")+")")
+		args = append(args, f[:]...)
 	}
 
-	if _, e := s.Env.StatsDB.Exec(sqlInsertPurchases, args...); e != nil {
-		*errLoc = e
-		s.Env.Logger.Println(`err saving purchases`, e.Error())
+	query := sqlInsertPurchases + strings.Join(q, ",")
+
+	if _, err := s.Env.StatsDB.Exec(query, args...); quit(services.ErrDatabaseMissing{"purchases", err}) {
+		return
 	}
 }
 
-const sqlInsertPurchases = `INSERT INTO purchases (sale_id, billable, rev_tx, rev_tx_home, rev_ssp, rev_ssp_home, ssp_id, folder_id, creative_id, country_id, vertical_id, brand_id, network_id, subnetwork_id, networktype_id, gender_id, devicetype_id)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-`
+const sqlInsertPurchases = `INSERT INTO purchases (sale_id, billable, rev_tx, rev_tx_home, rev_ssp, rev_ssp_home, ssp_id, folder_id, creative_id, country_id, vertical_id, brand_id, network_id, subnetwork_id, networktype_id, gender_id, devicetype_id) `
 
 const sqlCreatePurchases = `CREATE TABLE purchases (
 	created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,

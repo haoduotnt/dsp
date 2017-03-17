@@ -6,6 +6,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/clixxa/dsp/bindings"
 	"github.com/clixxa/dsp/rtb_types"
+	"github.com/clixxa/dsp/services"
 	"testing"
 )
 
@@ -17,8 +18,9 @@ func TestStageFindClient(t *testing.T) {
 	flight.Runtime.DefaultB64 = &bindings.B64{Key: []byte("gekk"), IV: []byte("whatwhat")}
 
 	store := &flight.Runtime.Storage
-	store.Recalls = func(df json.Marshaler, a *error, b *int) {
+	store.Recalls = func(df json.Marshaler, b *int) error {
 		t.Log("recall save", df)
+		return nil
 	}
 	flight.Runtime.Logic = SimpleLogic{}
 
@@ -35,13 +37,13 @@ func TestStageFindClient(t *testing.T) {
 	_ = randpick
 	store.Folders.Add(&bindings.Folder{Active: true, Country: []int{3}, Brand: []int{6}, CPC: 250})
 
-	flight.Request.RawRequest.Impressions = []rtb_types.Impression{{}}
-	flight.Request.CountryID = 3
-	flight.Request.BrandID = 6
+	flight.Raw.Impressions = []rtb_types.Impression{{}}
+	flight.Dims.CountryID = 3
+	flight.Dims.BrandID = 6
 
 	res := map[int]int{}
 	for i := 0; i < 255; i++ {
-		flight.Request.RawRequest.Random255 = i
+		flight.Raw.Random255 = i
 		flight.Response.SeatBids = nil
 		flight.FolderID = 0
 		flight.CreativeID = 0
@@ -68,7 +70,7 @@ func TestWhitelist(t *testing.T) {
 	flight.Runtime.Logic = SimpleLogic{}
 	flight.Runtime.Logger = l
 	f := flight.Runtime.Storage.Folders.ByID(flight.Runtime.Storage.Folders.Add(&bindings.Folder{Active: true, Creative: []int{3}, Network: []int{1, 2}}))
-	flight.Request.NetworkID = 2
+	flight.Dims.NetworkID = 2
 	FindClient(flight)
 	if flight.FolderID != f.ID {
 		t.Error("wrong folder selected, wanted", f.ID, "got", flight.FolderID)
@@ -121,7 +123,7 @@ func TestLoadAll(t *testing.T) {
 	sqlm.MatchExpectationsInOrder(false)
 
 	out, dump := bindings.BufferedLogger(t)
-	be := &BidEntrypoint{BindingDeps: bindings.BindingDeps{ConfigDB: db, StatsDB: db, Logger: out, Debug: out, DefaultKey: ":", Redis: &bindings.RandomCache{&bindings.CountingCache{}}}}
+	be := &BidEntrypoint{BindingDeps: services.BindingDeps{ConfigDB: db, StatsDB: db, Logger: out, Debug: out, DefaultKey: ":", Redis: &services.RandomCache{&services.CountingCache{}}}}
 	be.Cycle(func(err error) bool {
 		t.Log("err cycling", err.Error())
 		return false

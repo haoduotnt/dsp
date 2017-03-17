@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/clixxa/dsp/bindings"
 	"github.com/clixxa/dsp/dsp_flights"
 	"github.com/clixxa/dsp/services"
 	"github.com/clixxa/dsp/wish_flights"
@@ -19,7 +20,7 @@ func (m *Main) Launch() {
 	messages := make(chan string, 100)
 	printer := &services.Printer{Messages: messages}
 
-	deps := &services.ProductionDepsService{Messages: messages, Consul: consul}
+	deps := &services.ProductionDepsService{Messages: messages, Consul: consul, RedisFactory: bindings.NewRedisCache}
 
 	dspRuntime := &dsp_flights.BidEntrypoint{AllTest: m.TestOnly, Logic: dsp_flights.SimpleLogic{}}
 	winRuntime := &wish_flights.WishEntrypoint{Messages: messages}

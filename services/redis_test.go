@@ -1,4 +1,4 @@
-package bindings
+package services
 
 import (
 	"fmt"
