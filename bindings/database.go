@@ -623,7 +623,7 @@ func (s Purchases) Save(fs [][17]interface{}, quit func(error) bool) {
 	}
 }
 
-const sqlInsertPurchases = `INSERT INTO purchases (sale_id, billable, rev_tx, rev_tx_home, rev_ssp, rev_ssp_home, ssp_id, folder_id, creative_id, country_id, vertical_id, brand_id, network_id, subnetwork_id, networktype_id, gender_id, devicetype_id) `
+const sqlInsertPurchases = `INSERT INTO purchases (sale_id, billable, rev_tx, rev_tx_home, rev_ssp, rev_ssp_home, ssp_id, folder_id, creative_id, country_id, vertical_id, brand_id, network_id, subnetwork_id, networktype_id, gender_id, devicetype_id) VALUES `
 
 const sqlCreatePurchases = `CREATE TABLE purchases (
 	created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
