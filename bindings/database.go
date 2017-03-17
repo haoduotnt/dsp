@@ -617,6 +617,7 @@ func (s Purchases) Save(fs [][17]interface{}, quit func(error) bool) {
 	}
 
 	query := sqlInsertPurchases + strings.Join(q, ",")
+	s.Env.Logger.Println("query:", query)
 
 	if _, err := s.Env.StatsDB.Exec(query, args...); quit(services.ErrDatabaseMissing{"purchases", err}) {
 		return
