@@ -23,6 +23,7 @@ func (e *ErrorFilter) Quit(err error) (n bool) {
 		e.Messages <- ep.Error()
 		return e.Tolerances&ParsingErrors == 0
 	}
+	e.Messages <- err.Error()
 	return e.Tolerances&UnknownErrors == 0
 }
 

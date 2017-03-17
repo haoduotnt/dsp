@@ -107,7 +107,7 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 		// get the recalls
 		e.Messages <- fmt.Sprintf(`getting bid info for %d`, wf.RecallID)
 		if quit(&services.ErrDatabaseMissing{"recallid", recalls.Fetch(wf, wf.RecallID)}) {
-			return
+			continue
 		}
 
 		// apply business logic
@@ -120,8 +120,10 @@ func (e *WishEntrypoint) ConsumeBatch(buff []*WinFlight) {
 	}
 
 	e.Messages <- `inserting purchase records`
-	purchases.Save(rows, quit)
-	e.Messages <- fmt.Sprintf(`win batch did %d successfully in %s`, len(buff), time.Since(start))
+	if len(rows) > 0 {
+		purchases.Save(rows, quit)
+	}
+	e.Messages <- fmt.Sprintf(`win batch did %d/%d successfully in %s`, len(rows), len(buff), time.Since(start))
 }
 
 type WinFlight struct {
